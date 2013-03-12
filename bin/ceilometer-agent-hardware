@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     prepare_service(sys.argv)
     mgr = manager.AgentManager()
-    topic = 'ceilometer.agent.compute'
+    topic = 'ceilometer.agent.hardware'
     ceilo = rpc_service.Service(cfg.CONF.host,
                                 topic, mgr)
     launcher = service.launch(ceilo)
