@@ -114,6 +114,9 @@ setuptools.setup(
     net = ceilometer.compute.pollsters:NetPollster
     instance = ceilometer.compute.pollsters:InstancePollster
 
+    [ceilometer.poll.hardware]
+    cpu = ceilometer.compute.pollsters:CPUPollster
+
     [ceilometer.poll.central]
     network_floatingip = ceilometer.network.floatingip:FloatingIPPollster
     image = ceilometer.image.glance:ImagePollster
@@ -130,6 +133,9 @@ setuptools.setup(
 
     [ceilometer.compute.virt]
     libvirt = ceilometer.compute.virt.libvirt.inspector:LibvirtInspector
+
+    [ceilometer.hardware.pool]
+    snmp = ceilometer.hardware.snmp.inspector:SNMPInspector
 
     [ceilometer.transformer]
     accumulator = ceilometer.transformer.accumulator:TransformerAccumulator

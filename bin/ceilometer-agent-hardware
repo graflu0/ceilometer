@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 #
-# Copyright © 2012 eNovance <licensing@enovance.com>
+# Copyright © 2013 ZHAW SoE
 #
-# Author: Julien Danjou <julien@danjou.info>
+# Authors: Lucas Graf <graflu0@students.zhaw.ch>
+#          Toni Zehnder <zehndton@students.zhaw.ch>
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -22,7 +23,7 @@ eventlet.monkey_patch()
 import sys
 
 from oslo.config import cfg
-from ceilometer.compute import manager
+from ceilometer.hardware import manager
 from ceilometer.service import prepare_service
 from ceilometer.openstack.common import service
 from ceilometer.openstack.common.rpc import service as rpc_service
