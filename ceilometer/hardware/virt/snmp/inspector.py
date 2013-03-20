@@ -1,9 +1,8 @@
 # -*- encoding: utf-8 -*-
 #
-# Copyright © 2013 ZHAW SoE
+# Copyright © 2012 Red Hat, Inc
 #
-# Authors: Lucas Graf <graflu0@students.zhaw.ch>
-#          Toni Zehnder <zehndton@students.zhaw.ch>
+# Author: Eoghan Glynn <eglynn@redhat.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -16,45 +15,21 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+"""Implementation of Inspector abstraction for libvirt"""
 
-import collections
-
-
-# Named tuple representing CPU statistics.
-#
-# number: number of CPUs
-# time: cumulative CPU time
-#
-CPUStats = collections.namedtuple('CPUStats', ['number', 'time'])
-
-# Exception types
-#
-class InspectorException(Exception):
-    def __init__(self, message=None):
-        super(InspectorException, self).__init__(message)
-
-
-class InstanceNotFoundException(InspectorException):
-    pass
-
-
-# Main virt inspector abstraction layering over the hypervisor API.
-#
-from oslo.config import cfg
-
+from ceilometer.hardware.virt import inspector as snmp_inspector
 from ceilometer.openstack.common import log as logging
-
 
 LOG = logging.getLogger(__name__)
 
-CONF = cfg.CONF
 
+class SNMPInspector(snmp_inspector.Inspector):
 
-class SNMPInspector(object):
 
     def __init__(self):
         pass
 
-
     def inspect_cpus(self, instance_name):
-        return CPUStats('2',['2', '5'])
+        domain = self._lookup_by_name(instance_name)
+        (_, _, _, num_cpu, cpu_time) = domain.info()
+        return snmp_inspector.CPUStats(number=2, time=5)

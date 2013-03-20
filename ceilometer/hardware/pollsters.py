@@ -82,20 +82,6 @@ class CPUPollster(plugin.ComputePollster):
             cpu_info = manager.inspector.inspect_cpus(instance_name)
             self.LOG.info("CPUTIME USAGE: %s %d",
                           instance.__dict__, cpu_info.time)
-            cpu_util = self.get_cpu_util(instance, cpu_info)
-            self.LOG.info("CPU UTILIZATION %%: %s %0.2f",
-                          instance.__dict__, cpu_util)
-            # FIXME(eglynn): once we have a way of configuring which measures
-            #                are published to each sink, we should by default
-            #                disable publishing this derived measure to the
-            #                metering store, only publishing to those sinks
-            #                that specifically need it
-            yield make_counter_from_instance(instance,
-                                             name='cpu_util',
-                                             type=counter.TYPE_GAUGE,
-                                             unit='%',
-                                             volume=cpu_util,
-                                             )
             yield make_counter_from_instance(instance,
                                              name='cpu',
                                              type=counter.TYPE_CUMULATIVE,

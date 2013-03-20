@@ -76,6 +76,7 @@ setuptools.setup(
 
     scripts=['bin/ceilometer-agent-compute',
              'bin/ceilometer-agent-central',
+             'bin/ceilometer-agent-hardware',
              'bin/ceilometer-api',
              'bin/ceilometer-collector',
              'bin/ceilometer-dbsync'],
@@ -134,8 +135,8 @@ setuptools.setup(
     [ceilometer.compute.virt]
     libvirt = ceilometer.compute.virt.libvirt.inspector:LibvirtInspector
 
-    [ceilometer.hardware.pool]
-    snmp = ceilometer.hardware.snmp.inspector:SNMPInspector
+    [ceilometer.hardware.virt]
+    snmp = ceilometer.hardware.virt.snmp.inspector:SNMPInspector
 
     [ceilometer.transformer]
     accumulator = ceilometer.transformer.accumulator:TransformerAccumulator

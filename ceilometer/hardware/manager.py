@@ -25,16 +25,16 @@ from ceilometer import agent
 from ceilometer import extension_manager
 from ceilometer.openstack.common import log
 
-from ceilometer.hardware.snmp import inspector as snmp_inspector
+from ceilometer.hardware.virt import inspector as snmp_inspector
 
 OPTS = [
-    cfg.ListOpt('disabled_compute_pollsters',
+    cfg.ListOpt('disabled_hardware_pollsters',
         default=[],
-        help='list of compute agent pollsters to disable',
+        help='list of hardware agent pollsters to disable',
     ),
     cfg.StrOpt('hypervisor_inspector',
-        default='libvirt',
-        help='Inspector to use for inspecting the hypervisor layer'),
+        default='snmp',
+        help='Inspector to use for inspecting hw with snmp'),
     ]
 
 cfg.CONF.register_opts(OPTS)
@@ -65,16 +65,16 @@ class PollingTask(agent.PollingTask):
         self.poll_and_publish_instances(
             self.manager.nv.instance_get_all_by_host(cfg.CONF.host))
 
-def get_inspectors():
+def get_inspector():
     #inspectors+=getSNMPInspector()
     #inspectors+=getSMARTInspector()
     #inspectors+=...
     #return inspectors
     #TODO siehe oben
     try:
-        namespace = 'ceilometer.hardware.pool'
+        namespace = 'ceilometer.compute.hardware'
         mgr = driver.DriverManager(namespace,
-            cfg.CONF.hypervisor_inspector,
+            'snmp',
             invoke_on_load=True)
         return mgr.driver
     except ImportError as e:
@@ -90,7 +90,7 @@ class AgentManager(agent.AgentManager):
                 disabled_names=cfg.CONF.disabled_hardware_pollsters,
             ),
         )
-        self._inspectors = get_inspectors()
+        self._inspectors = get_inspector()
 
     def create_polling_task(self):
         return PollingTask(self)

@@ -19,4 +19,5 @@ doc/source/api/autoindex.rst
 /.idea
 /Source - Ceilometer.iml
 /Ceilometer.iml
+/ceilometer.iml
 
