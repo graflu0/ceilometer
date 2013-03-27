@@ -135,8 +135,8 @@ setuptools.setup(
     [ceilometer.compute.virt]
     libvirt = ceilometer.compute.virt.libvirt.inspector:LibvirtInspector
 
-    [ceilometer.hardware.virt]
-    snmp = ceilometer.hardware.virt.snmp.inspector:SNMPInspector
+    [ceilometer.hardware.pool]
+    snmp = ceilometer.hardware.inspector.snmp.inspector:SNMPInspector
 
     [ceilometer.transformer]
     accumulator = ceilometer.transformer.accumulator:TransformerAccumulator

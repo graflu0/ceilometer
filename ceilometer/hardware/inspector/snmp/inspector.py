@@ -18,6 +18,7 @@
 """Inspector abstraction for read-only access to hypervisors"""
 
 import collections
+from ceilometer.openstack.common import log as logging
 
 # Named tuple representing instances.
 #
@@ -83,3 +84,14 @@ class Inspector(object):
                  read and written, and the error count
         """
         raise NotImplementedError()
+
+LOG = logging.getLogger(__name__)
+
+class SNMPInspector(Inspector):
+
+
+    def __init__(self):
+        pass
+
+    def inspect_cpus(self, instance_name):
+        return CPUStats(number=2, time=5)

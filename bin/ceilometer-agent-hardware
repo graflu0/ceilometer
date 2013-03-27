@@ -30,11 +30,16 @@ from ceilometer.openstack.common.rpc import service as rpc_service
 
 
 if __name__ == '__main__':
-
+    #TODO delete print commands
     prepare_service(sys.argv)
     mgr = manager.AgentManager()
+    print("AgentManager initialisiert")
     topic = 'ceilometer.agent.hardware'
     ceilo = rpc_service.Service(cfg.CONF.host,
                                 topic, mgr)
+    print("Service initialisiert")
     launcher = service.launch(ceilo)
+    print("Launch fertig")
+
     launcher.wait()
+    print("Wait fertig")
