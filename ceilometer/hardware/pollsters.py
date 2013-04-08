@@ -23,7 +23,7 @@ import datetime
 
 from ceilometer import counter
 from ceilometer.hardware import plugin
-from ceilometer.hardware import instance as compute_instance
+from ceilometer.hardware import instance as hardware_instance
 from ceilometer.openstack.common import log
 from ceilometer.openstack.common import timeutils
 
@@ -45,10 +45,10 @@ def make_counter_from_instance(instance, name, type, unit, volume):
         project_id=instance.tenant_id,
         resource_id=instance.id,
         timestamp=timeutils.isotime(),
-        resource_metadata=compute_instance.get_metadata_from_object(instance),
+        resource_metadata=hardware_instance.get_metadata_from_object(instance),
     )
 
-class CPUPollster(plugin.ComputePollster):
+class CPUPollster(plugin.HardwarePollster):
 
     LOG = log.getLogger(__name__ + '.cpu')
 
@@ -76,10 +76,12 @@ class CPUPollster(plugin.ComputePollster):
         return ['cpu', 'cpu_util']
 
     def get_counters(self, manager, instance):
-        self.LOG.info('checking instance %s', instance.id)
-        instance_name = _instance_name(instance)
+        #TODO set instance Attributes
+        self.LOG.info('checking instance %s', instance)
+        #print(getattr(instance, 'OS-EXT-SRV-ATTR:instance_name', u''))
+        #instance_name = _instance_name(instance)
         try:
-            cpu_info = manager.inspector_manager.inspect_cpus(instance_name)
+            cpu_info = manager.inspector_manager.inspect_cpus(instance)
             self.LOG.info("CPUTIME USAGE: %s %d",
                           instance.__dict__, cpu_info.time)
             yield make_counter_from_instance(instance,
@@ -90,5 +92,5 @@ class CPUPollster(plugin.ComputePollster):
                                              )
         except Exception as err:
             self.LOG.error('could not get CPU time for %s: %s',
-                           instance.id, err)
+                           instance, err)
             self.LOG.exception(err)

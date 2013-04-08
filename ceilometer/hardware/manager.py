@@ -18,6 +18,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import socket
+
 from oslo.config import cfg
 
 from ceilometer import agent
@@ -43,22 +45,31 @@ class PollingTask(agent.PollingTask):
             for instance in instances:
                 for pollster in self.pollsters:
                     try:
+                        #TODO get data from instances
                         LOG.info("Polling pollster %s", pollster.name)
-
+                        """publisher(list(pollster.obj.get_counters(
+                            self.manager,
+                            instance)))"""
+                        print(instance)
+                        print(pollster)
+                        print(list(pollster.obj.get_counters(
+                            self.manager,
+                            instance)))
                     except Exception as err:
                         LOG.warning('Continue after error from %s: %s',
                             pollster.name, err)
                         LOG.exception(err)
-                #TODO get data from instances
-                pass
 
     def poll_and_publish(self):
-        print(cfg.CONF.host)
         self.poll_and_publish_instances(self._get_all_hosts())
 
     def _get_all_hosts(self):
+        hosts = ["localhost","192.168.1.1"]
+        #for(int i; i<hosts.len)
         #TODO get hosts from cfg, list & return them
-        return ["localhost","192.168.1.1"]
+        #instance{name, ip, uuid,...}?
+        #print(socket.gethostbyaddr('google.ch'))
+        return hosts
 
 class AgentManager(agent.AgentManager):
 
@@ -73,19 +84,6 @@ class AgentManager(agent.AgentManager):
 
     def create_polling_task(self):
         return PollingTask(self)
-
-    """def setup_notifier_task(self):
-        """"""For nova notifier usage""""""
-        task = PollingTask(self)
-        for pollster in self.pollster_manager.extensions:
-            task.add(
-                pollster,
-                self.pipeline_manager.pipelines)
-        self.notifier_task = task
-
-    def poll_instance(self, context, instance):
-        """"""Poll one instance.""""""
-        self.notifier_task.poll_and_publish_instances([instance])"""
 
     @property
     def inspector_manager(self):

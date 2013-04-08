@@ -56,7 +56,7 @@ class Inspector(object):
         """
         raise NotImplementedError()
 
-    def inspect_cpus(self, instance_name):
+    def inspect_cpus(self, instance):
         """
         Inspect the CPU statistics for an instance.
 

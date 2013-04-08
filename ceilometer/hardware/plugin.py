@@ -23,7 +23,7 @@ import abc
 from ceilometer import plugin
 
 
-class ComputePollster(plugin.PollsterBase):
+class HardwarePollster(plugin.PollsterBase):
     """Base class for plugins that support the polling API on the
     compute node."""
 
