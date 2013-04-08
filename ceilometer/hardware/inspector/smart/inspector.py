@@ -87,7 +87,7 @@ class Inspector(object):
 
 LOG = logging.getLogger(__name__)
 
-class SNMPInspector(Inspector):
+class SMARTInspector(Inspector):
 
 
     def __init__(self):
