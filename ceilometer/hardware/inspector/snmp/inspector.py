@@ -19,6 +19,7 @@
 
 import collections
 from ceilometer.openstack.common import log as logging
+from pysnmp.entity.rfc3413.oneliner import cmdgen
 
 # Named tuple representing instances.
 #
@@ -89,9 +90,52 @@ LOG = logging.getLogger(__name__)
 
 class SNMPInspector(Inspector):
 
-
     def __init__(self):
-        pass
+        self.ip = "10.0.0.3"                        #TODO: Set IP (this is a HP SWITCH ProCurve)
+        self.port = 161                             #TODO: Set Port
+        self.cpuLoadOid = "1.3.6.1.4.1.2021.10.1.3.2"   #CPU 5 minute load, #TODO: Set oids
+        self.hrProcessorTableOid = "1.3.6.1.2.1.25.3.3" #hrProcessorTableOid
+        self.cmdGen = cmdgen.CommandGenerator()
 
     def inspect_cpus(self, instance_name):
-        return CPUStats(number=2, time=6)
+        #get CPU Load
+        errorIndication, errorStatus, errorIndex, varBinds = self.cmdGen.getCmd(
+            cmdgen.CommunityData("public"),
+            cmdgen.UdpTransportTarget((self.ip, self.port)),
+            self.cpuLoadOid
+        )
+        if errorIndication:
+            print(errorIndication)
+        else:
+            if errorStatus:
+                print("%s at %s" % (
+                    errorStatus.prettyPrint(),
+                    errorIndex and varBinds[int(errorIndex)-1] or "?"
+                ))
+            else:
+                for name, val in varBinds:
+                    self.cpuLoad = val
+
+        #get CPU Count
+        errorIndication, errorStatus, errorIndex, varBindTable = self.cmdGen.getCmd(
+            cmdgen.CommunityData("public"),
+            cmdgen.UdpTransportTarget((self.ip, self.port)),
+            self.hrProcessorTableOid,
+            lexicographicMode=False
+        )
+        if errorIndication:
+            print(errorIndication)
+        else:
+            if errorStatus:
+                print("%s at %s" % (
+                    errorStatus.prettyPrint(),
+                    errorIndex and varBinds[int(errorIndex)-1] or "?"
+                    ))
+            else:
+                counter = 0
+                for varBindTableRow in varBindTable:
+                    for name, val in varBindTableRow:
+                        counter = counter + 1
+                self.cpuNumber = counter/2
+
+        return CPUStats(number=self.cpuNumber, time=self.cpuLoad)
