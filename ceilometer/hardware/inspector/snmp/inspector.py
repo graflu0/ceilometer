@@ -94,4 +94,4 @@ class SNMPInspector(Inspector):
         pass
 
     def inspect_cpus(self, instance_name):
-        return CPUStats(number=2, time=5)
+        return CPUStats(number=2, time=6)
