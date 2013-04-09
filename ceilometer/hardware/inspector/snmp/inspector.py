@@ -93,7 +93,7 @@ class SNMPInspector(Inspector):
     def __init__(self):
         self.ip = "10.0.0.3"                        #TODO: Set IP (this is a HP SWITCH ProCurve)
         self.port = 161                             #TODO: Set Port
-        self.cpuLoadOid = "1.3.6.1.4.1.2021.10.1.3.2"   #CPU 5 minute load, #TODO: Set oids
+        self.cpuTimeOid = "1.3.6.1.4.1.2021.11.52.0"   #Raw system cpu time, #TODO: Set oids
         self.hrProcessorTableOid = "1.3.6.1.2.1.25.3.3" #hrProcessorTableOid
         self.cmdGen = cmdgen.CommandGenerator()
 
@@ -102,7 +102,7 @@ class SNMPInspector(Inspector):
         errorIndication, errorStatus, errorIndex, varBinds = self.cmdGen.getCmd(
             cmdgen.CommunityData("public"),
             cmdgen.UdpTransportTarget((self.ip, self.port)),
-            self.cpuLoadOid
+            self.cpuTimeOid
         )
         if errorIndication:
             print(errorIndication)
