@@ -80,7 +80,7 @@ class SNMPInspector(Inspector):
         self._port = 161                             #TODO: Set Port
         self._securityName = "public"
         self._cpuTimeOid = "1.3.6.1.4.1.2021.11.52.0"   #Raw system cpu time, #TODO: Set oids
-        self._hrProcessorTableOid = "1.3.6.1.2.1.25.3.3" #hrProcessorTableOid
+        self._hrProcessorTableOid = "1.3.6.1.2.1.25.3.3.1.2" #hrProcessorTableOid
         self._cmdGen = cmdgen.CommandGenerator()
         self._cpuNumber = -1
         self._cpuTime = -1
@@ -129,7 +129,6 @@ class SNMPInspector(Inspector):
         counter = 0
         for varBindTableRow in self._walkOID(self._cpuTimeOid):
             for name, val in varBindTableRow:
-                counter += 1
-        self.cpuNumber = counter / 2
+                self.cpuNumber += 1
         if(self._cpuNumber != -1 and self._cpuTime != -1):
             return CPUStats(number=self._cpuNumber, time=self._cpuTime)
