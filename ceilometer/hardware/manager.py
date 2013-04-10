@@ -18,7 +18,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import socket
+
 
 from oslo.config import cfg
 
@@ -26,6 +26,7 @@ from ceilometer import agent
 from ceilometer import extension_manager
 from ceilometer.openstack.common import log
 from ceilometer.hardware.inspector import manager as inspector_manager
+from ceilometer.hardware.instance import HardwareInstance as Instance
 
 OPTS = [
     cfg.ListOpt('disabled_hardware_pollsters',
@@ -38,7 +39,6 @@ cfg.CONF.register_opts(OPTS)
 
 LOG = log.getLogger(__name__)
 
-
 class PollingTask(agent.PollingTask):
     def poll_and_publish_instances(self, instances):
         with self.publish_context as publisher:
@@ -47,11 +47,7 @@ class PollingTask(agent.PollingTask):
                     try:
                         #TODO get data from instances
                         LOG.info("Polling pollster %s", pollster.name)
-                        """publisher(list(pollster.obj.get_counters(
-                            self.manager,
-                            instance)))"""
                         print(instance)
-                        print(pollster)
                         print(list(pollster.obj.get_counters(
                             self.manager,
                             instance)))
@@ -61,14 +57,19 @@ class PollingTask(agent.PollingTask):
                         LOG.exception(err)
 
     def poll_and_publish(self):
+        """if(self._hosts == None):
+            self.hosts = self._get_all_hosts()"""
         self.poll_and_publish_instances(self._get_all_hosts())
 
     def _get_all_hosts(self):
-        hosts = ["localhost","192.168.1.1"]
-        #for(int i; i<hosts.len)
         #TODO get hosts from cfg, list & return them
-        #instance{name, ip, uuid,...}?
-        #print(socket.gethostbyaddr('google.ch'))
+        host_ips = ["localhost", "10.0.0.2"]
+
+        hosts =[]
+
+        for host in host_ips:
+            hosts.append(Instance(host))
+
         return hosts
 
 class AgentManager(agent.AgentManager):

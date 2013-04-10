@@ -77,9 +77,7 @@ class CPUPollster(plugin.HardwarePollster):
 
     def get_counters(self, manager, instance):
         #TODO set instance Attributes
-        self.LOG.info('checking instance %s', instance)
-        #print(getattr(instance, 'OS-EXT-SRV-ATTR:instance_name', u''))
-        #instance_name = _instance_name(instance)
+        self.LOG.info('checking instance %s', instance.ip_address)
         try:
             cpu_info = manager.inspector_manager.inspect_cpus(instance)
             self.LOG.info("CPUTIME USAGE: %s %d",

@@ -78,7 +78,7 @@ def _sanitize_cmd_line(argv):
     return [a for a in argv if a in cli_opt_names]
 
 
-def prepare_service(argv=[]):
+def prepare_service(argv=[], program=None):
     rpc.set_defaults(control_exchange='ceilometer')
-    cfg.CONF(argv[1:], project='ceilometer')
+    cfg.CONF(argv[1:], project='ceilometer', prog=program)
     log.setup('ceilometer')

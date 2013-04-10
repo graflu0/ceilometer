@@ -13,7 +13,7 @@ OPTS = [
     cfg.StrOpt('snmp_inspector',
         default='snmp',
         help='Inspector to use for inspecting hw with snmp')
-    #TODO add options for new inspectors
+    #TODO add options here for new inspectors
     ]
 
 cfg.CONF.register_opts(OPTS)
@@ -25,7 +25,7 @@ class InspectorManager(object):
         self._snmp_inspector = self._get_inspector(cfg.CONF.snmp_inspector)
 
     def inspect_cpus(self, instance_name):
-        #TODO utilize config to check which inspector to take to check this instance
+        #TODO use config to check which inspector to take to check this instance
         self._snmp_inspector.inspect_cpus("Test")
         pass
 

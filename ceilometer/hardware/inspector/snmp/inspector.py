@@ -160,7 +160,7 @@ class SNMPInspector(Inspector):
             else:
                 return varBindTable
 
-    def inspect_cpus(self, instance_name):
+    def inspect_cpus(self, instance):
         #get CPU Load
         self._cpuTime = self._getValueFromOID(self._cpuTimeOid)
 
