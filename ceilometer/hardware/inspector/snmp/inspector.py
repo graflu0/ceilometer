@@ -22,6 +22,8 @@ from ceilometer.openstack.common import log as logging
 from pysnmp.entity.rfc3413.oneliner import cmdgen
 from ceilometer.hardware.inspector.inspector import Inspector
 
+#TODO: Named to Inspector?
+
 # Named tuple representing CPU statistics.
 #
 # number: number of CPUs
@@ -40,16 +42,14 @@ RAMStats = collections.namedtuple('RAMStats', ['total', 'used'])
 
 # Named tuple representing disk statistics.
 #
-# read_bytes: number of bytes read
-# read_requests: number of read operations
-# write_bytes: number of bytes written
+# description: storage description
+# size: storage size (kBytes)
+# used: storage used
 # write_requests: number of write operations
 # errors: number of errors
 #
 DiskStats = collections.namedtuple('DiskStats',
-    ['total_size', 'space_available',
-     'write_bytes', 'write_requests',
-     'errors'])
+    ['path', 'size', 'used'])
 
 # Exception types
 #
@@ -73,6 +73,10 @@ class SNMPInspector(Inspector):
         self._hrProcessorTableOid = "1.3.6.1.2.1.25.3.3.1.2" #hrProcessorTableOid
         self._ramTotalOid = "1.3.6.1.4.1.2021.4.5.0"
         self._ramUsedOid = "1.3.6.1.4.1.2021.4.6.0"
+        self._diskIndexOid = "1.3.6.1.4.1.2021.9.1.1"
+        self._diskPathOid = "1.3.6.1.4.1.2021.9.1.2"
+        self._diskSizeOid = "1.3.6.1.4.1.2021.9.1.6"
+        self._diskUsedOid = "1.3.6.1.4.1.2021.9.1.8"
         self._cmdGen = cmdgen.CommandGenerator()
         self._cpuNumber = -1
         self._cpuTime = -1
@@ -136,3 +140,17 @@ class SNMPInspector(Inspector):
 
         if(self._ramTotal != -1 and self._ramUsed != -1):
             return RAMStats(total=self._ramTotal, used=self._ramUsed)
+
+    def inspect_disks(self, instance_name):
+        diskIndexes = self._walkOID(self._diskIndexOid)
+        diskStats = []
+        for diskIndex in diskStats:
+            pathInd = self._getValueFromOID(self._diskPathOid + "." + diskIndex)
+            sizeInd = self._getValueFromOID(self._diskSizeOid + "." + diskIndex)
+            usedInd = self._getValueFromOID(self._diskUsedOid + "." + diskIndex)
+            diskStats.append(DiskStats(path=pathInd, size=sizeInd, used=usedInd))
+
+        return diskStats
+
+
+

@@ -32,8 +32,7 @@ class Inspector(object):
         Inspect the disk statistics for an instance.
 
         :param instance_name: the name of the target instance
-        :return: for each disk, the number of bytes & operations
-                 read and written, and the error count
+        :return: list with DiskStats (path, size, used)
         """
         raise NotImplementedError()
 
