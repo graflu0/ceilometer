@@ -32,7 +32,7 @@ class Inspector(object):
         Inspect the disk statistics for an instance.
 
         :param instance_name: the name of the target instance
-        :return: list with DiskStats (path, size, used)
+        :return: collection with DiskStats (path, size, used)
         """
         raise NotImplementedError()
 
@@ -42,5 +42,14 @@ class Inspector(object):
 
         :param instance_name: the name of the target instance
         :return: total RAM, used RAM
+        """
+    raise NotImplementedError()
+
+    def inspect_netInt(self, instance_name):
+        """
+        Inspect the network interfaces for an instance.
+
+        :param instance_name: the name of the target instance
+        :return: collection with NetIntStats ['name', 'bandwidth', 'used', 'in', 'out', 'error']
         """
     raise NotImplementedError()

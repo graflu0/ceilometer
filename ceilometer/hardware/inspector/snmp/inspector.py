@@ -45,11 +45,21 @@ RAMStats = collections.namedtuple('RAMStats', ['total', 'used'])
 # description: storage description
 # size: storage size (kBytes)
 # used: storage used
-# write_requests: number of write operations
-# errors: number of errors
 #
 DiskStats = collections.namedtuple('DiskStats',
     ['path', 'size', 'used'])
+
+
+# Named tuple representing network interface statistics.
+#
+# name: name of the network interface
+# bandwidth: current bandwidth (bit/s)
+# received: total number of octets received
+# transmitted: total number of octets transmitted
+# error: number of outbound packets that could not be transmitted because of errors
+#
+NetIntStats = collections.namedtuple('NetIntStats',
+    ['name', 'bandwidth', 'used', 'received', 'transmitted', 'error'])
 
 # Exception types
 #
@@ -69,15 +79,27 @@ class SNMPInspector(Inspector):
         self._ip = "10.0.0.3"                        #TODO: Set IP (this is a HP SWITCH ProCurve)
         self._port = 161                             #TODO: Set Port
         self._securityName = "public"
+        self._cmdGen = cmdgen.CommandGenerator()
+
+        #CPU OIDs
         self._cpuTimeOid = "1.3.6.1.4.1.2021.11.52.0"   #Raw system cpu time, #TODO: Set oids
         self._hrProcessorTableOid = "1.3.6.1.2.1.25.3.3.1.2" #hrProcessorTableOid
+        #RAM OIDs
         self._ramTotalOid = "1.3.6.1.4.1.2021.4.5.0"
         self._ramUsedOid = "1.3.6.1.4.1.2021.4.6.0"
+        #Disk OIDs
         self._diskIndexOid = "1.3.6.1.4.1.2021.9.1.1"
         self._diskPathOid = "1.3.6.1.4.1.2021.9.1.2"
         self._diskSizeOid = "1.3.6.1.4.1.2021.9.1.6"
         self._diskUsedOid = "1.3.6.1.4.1.2021.9.1.8"
-        self._cmdGen = cmdgen.CommandGenerator()
+        #Network Interface OIDs
+        self._netIntIndexOid = "1.3.6.1.2.1.2.2.1.1"
+        self._netIntNameOid = "1.3.6.1.2.1.2.2.1.2"
+        self._netIntBandwidthOid = "1.3.6.1.2.1.2.2.1.5"
+        self._netIntReceivedOid = "1.3.6.1.2.1.2.2.1.10"
+        self._netIntTransmittedOid = "1.3.6.1.2.1.2.2.1.16"
+        self._netIntErrorOid = "1.3.6.1.2.1.2.2.1.20"
+
         self._cpuNumber = -1
         self._cpuTime = -1
         self._ramTotal = -1
@@ -144,13 +166,22 @@ class SNMPInspector(Inspector):
     def inspect_disks(self, instance_name):
         diskIndexes = self._walkOID(self._diskIndexOid)
         diskStats = []
-        for diskIndex in diskStats:
+        for diskIndex in diskIndexes:
             pathInd = self._getValueFromOID(self._diskPathOid + "." + diskIndex)
             sizeInd = self._getValueFromOID(self._diskSizeOid + "." + diskIndex)
             usedInd = self._getValueFromOID(self._diskUsedOid + "." + diskIndex)
             diskStats.append(DiskStats(path=pathInd, size=sizeInd, used=usedInd))
-
         return diskStats
 
-
-
+    def inspect_disks(self, instance_name):
+        netIntIndexes = self._walkOID(self._netIntIndexOid)
+        netIntStats = []
+        for netIntIndex in netIntIndexes:
+            nameInd = self._getValueFromOID(self._netIntNameOid + "." + netIntIndex)
+            bandwidthInd = self._getValueFromOID(self._netIntBandwidthOid + "." + netIntIndex)
+            receivedInd = self._getValueFromOID(self._netIntReceivedOid + "." + netIntIndex)
+            transmittedInd = self._getValueFromOID(self._netIntTransmittedOid + "." + netIntIndex)
+            errorInd = self._getValueFromOID(self._netIntErrorOidOid + "." + netIntIndex)
+            netIntStats.append(NetIntStats(name=nameInd, bandwidth=bandwidthInd, received=receivedInd,
+                transmitted=transmittedInd, error=errorInd))
+        return netIntStats
