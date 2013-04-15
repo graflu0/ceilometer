@@ -22,20 +22,20 @@ from ceilometer.openstack.common import log as logging
 from pysnmp.entity.rfc3413.oneliner import cmdgen
 from ceilometer.hardware.inspector.inspector import Inspector
 
-# Named tuple representing instances.
-#
-# name: the name of the instance
-# uuid: the UUID associated with the instance
-#
-Instance = collections.namedtuple('Instance', ['name', 'UUID'])
-
-
 # Named tuple representing CPU statistics.
 #
 # number: number of CPUs
 # time: cumulative CPU time
 #
 CPUStats = collections.namedtuple('CPUStats', ['number', 'time'])
+
+# Named tuple representing RAM statistics.
+#
+# total: Total RAM
+# used: Used RAM
+# free: Free RAM
+#
+RAMStats = collections.namedtuple('RAMStats', ['total', 'used'])
 
 
 # Named tuple representing disk statistics.
@@ -50,16 +50,6 @@ DiskStats = collections.namedtuple('DiskStats',
     ['total_size', 'space_available',
      'write_bytes', 'write_requests',
      'errors'])
-
-# Named tuple representing NICs.
-#
-# name: the name of the NIC
-# mac: the MAC address
-# fref: the filter ref
-# parameters: miscellaneous parameters
-#
-Interface = collections.namedtuple('Interface', ['name', 'mac',
-                                                 'fref', 'parameters'])
 
 # Exception types
 #
@@ -81,9 +71,13 @@ class SNMPInspector(Inspector):
         self._securityName = "public"
         self._cpuTimeOid = "1.3.6.1.4.1.2021.11.52.0"   #Raw system cpu time, #TODO: Set oids
         self._hrProcessorTableOid = "1.3.6.1.2.1.25.3.3.1.2" #hrProcessorTableOid
+        self._ramTotalOid = "1.3.6.1.4.1.2021.4.5.0"
+        self._ramUsedOid = "1.3.6.1.4.1.2021.4.6.0"
         self._cmdGen = cmdgen.CommandGenerator()
         self._cpuNumber = -1
         self._cpuTime = -1
+        self._ramTotal = -1
+        self._ramUsed = -1
 
     def _getValueFromOID(self, oid):
         errorIndication, errorStatus, errorIndex, varBinds = self._cmdGen.getCmd(
@@ -105,7 +99,7 @@ class SNMPInspector(Inspector):
 
     def _walkOID(self, oid):
         errorIndication, errorStatus, errorIndex, varBindTable = self._cmdGen.getCmd(
-            cmdgen.CommunityData("public"),
+            cmdgen.CommunityData(self._securityName),
             cmdgen.UdpTransportTarget((self._ip, self._port)),
             oid,
             lexicographicMode=False
@@ -132,3 +126,13 @@ class SNMPInspector(Inspector):
                 self.cpuNumber += 1
         if(self._cpuNumber != -1 and self._cpuTime != -1):
             return CPUStats(number=self._cpuNumber, time=self._cpuTime)
+
+    def inspect_ram(self, instance):
+        #get total Ram
+        self._ramTotal = self._getValueFromOID(self._ramTotalOid)
+
+        #get used Ram
+        self._ramUsed = self._getValueFromOID(self._ramUsedOid)
+
+        if(self._ramTotal != -1 and self._ramUsed != -1):
+            return RAMStats(total=self._ramTotal, used=self._ramUsed)

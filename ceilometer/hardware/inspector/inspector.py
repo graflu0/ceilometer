@@ -36,3 +36,12 @@ class Inspector(object):
                  read and written, and the error count
         """
         raise NotImplementedError()
+
+    def inspect_ram(self, instance_name):
+        """
+        Inspect the ram statistics for an instance.
+
+        :param instance_name: the name of the target instance
+        :return: total RAM, used RAM
+        """
+    raise NotImplementedError()
