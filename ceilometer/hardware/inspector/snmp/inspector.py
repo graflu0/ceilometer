@@ -63,6 +63,8 @@ NetIntStats = collections.namedtuple('NetIntStats',
 
 # Exception types
 #
+
+
 class InspectorException(Exception):
     def __init__(self, message=None):
         super(InspectorException, self).__init__(message)
@@ -76,14 +78,14 @@ LOG = logging.getLogger(__name__)
 class SNMPInspector(Inspector):
 
     def __init__(self):
-        self._ip = "10.0.0.3"                        #TODO: Set IP (this is a HP SWITCH ProCurve)
-        self._port = 161                             #TODO: Set Port
+        self._ip = "10.0.0.3"                        # TODO: Set IP (this is a HP SWITCH ProCurve)
+        self._port = 161                             # TODO: Set Port
         self._securityName = "public"
         self._cmdGen = cmdgen.CommandGenerator()
 
         #CPU OIDs
-        self._cpuTimeOid = "1.3.6.1.4.1.2021.11.52.0"   #Raw system cpu time, #TODO: Set oids
-        self._hrProcessorTableOid = "1.3.6.1.2.1.25.3.3.1.2" #hrProcessorTableOid
+        self._cpuTimeOid = "1.3.6.1.4.1.2021.11.52.0"   # Raw system cpu time, # TODO: Set oids
+        self._hrProcessorTableOid = "1.3.6.1.2.1.25.3.3.1.2"    # hrProcessorTableOid
         #RAM OIDs
         self._ramTotalOid = "1.3.6.1.4.1.2021.4.5.0"
         self._ramUsedOid = "1.3.6.1.4.1.2021.4.6.0"
@@ -117,8 +119,8 @@ class SNMPInspector(Inspector):
             if errorStatus:
                 LOG.error("%s at %s" % (
                     errorStatus.prettyPrint(),
-                    errorIndex and varBinds[int(errorIndex)-1] or "?"
-                    ))
+                    errorIndex and varBinds[int(errorIndex) - 1] or "?"
+                ))
             else:
                 for name, val in varBinds:
                     return val
@@ -137,7 +139,7 @@ class SNMPInspector(Inspector):
                 LOG.error("%s at %s" % (
                     errorStatus.prettyPrint(),
                     errorIndex and varBindTable[int(errorIndex) - 1] or "?"
-                    ))
+                ))
             else:
                 return varBindTable
 
@@ -146,10 +148,9 @@ class SNMPInspector(Inspector):
         self._cpuTime = self._getValueFromOID(self._cpuTimeOid)
 
         #get CPU Count
-        counter = 0
         for varBindTableRow in self._walkOID(self._cpuTimeOid):
             for name, val in varBindTableRow:
-                self.cpuNumber += 1
+                self._cpuNumber += 1
         if(self._cpuNumber != -1 and self._cpuTime != -1):
             return CPUStats(number=self._cpuNumber, time=self._cpuTime)
 
@@ -173,7 +174,7 @@ class SNMPInspector(Inspector):
             diskStats.append(DiskStats(path=pathInd, size=sizeInd, used=usedInd))
         return diskStats
 
-    def inspect_disks(self, instance_name):
+    def inspect_netInt(self, instance_name):
         netIntIndexes = self._walkOID(self._netIntIndexOid)
         netIntStats = []
         for netIntIndex in netIntIndexes:
@@ -181,7 +182,7 @@ class SNMPInspector(Inspector):
             bandwidthInd = self._getValueFromOID(self._netIntBandwidthOid + "." + netIntIndex)
             receivedInd = self._getValueFromOID(self._netIntReceivedOid + "." + netIntIndex)
             transmittedInd = self._getValueFromOID(self._netIntTransmittedOid + "." + netIntIndex)
-            errorInd = self._getValueFromOID(self._netIntErrorOidOid + "." + netIntIndex)
+            errorInd = self._getValueFromOID(self._netIntErrorOid + "." + netIntIndex)
             netIntStats.append(NetIntStats(name=nameInd, bandwidth=bandwidthInd, received=receivedInd,
                 transmitted=transmittedInd, error=errorInd))
         return netIntStats
