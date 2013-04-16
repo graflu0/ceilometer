@@ -1,0 +1,12 @@
+# OsloConfig supports in a next release dictionaries
+
+hosts = { "192.168.1.1" :{"disabled_pollsters": "cpu, ram"
+			"disabled_inspectors": "snmp, smart"
+			"snmp"	: {"securityName":	"public"
+						"port":	161}}
+
+		"10.0.0.5" : {	"disabled_pollsters": "cpu, ram"
+						"disabled_inspectors": "snmp, smart"
+						"snmp"	: {"securityName":	"public"
+									"port":	161}}				
+		}
