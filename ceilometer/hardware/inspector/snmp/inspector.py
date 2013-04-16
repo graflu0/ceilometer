@@ -78,7 +78,6 @@ LOG = logging.getLogger(__name__)
 class SNMPInspector(Inspector):
 
     def __init__(self):
-        self._ip = "10.0.0.3"                        # TODO: Set IP (this is a HP SWITCH ProCurve)
         self._port = 161                             # TODO: Set Port
         self._securityName = "public"
         self._cmdGen = cmdgen.CommandGenerator()
@@ -107,10 +106,10 @@ class SNMPInspector(Inspector):
         self._ramTotal = -1
         self._ramUsed = -1
 
-    def _getValueFromOID(self, oid):
+    def _getValueFromOID(self, oid, ip):
         errorIndication, errorStatus, errorIndex, varBinds = self._cmdGen.getCmd(
             cmdgen.CommunityData(self._securityName),
-            cmdgen.UdpTransportTarget((self._ip, self._port)),
+            cmdgen.UdpTransportTarget((ip, self._port)),
             oid
         )
         if errorIndication:
@@ -125,10 +124,10 @@ class SNMPInspector(Inspector):
                 for name, val in varBinds:
                     return val
 
-    def _walkOID(self, oid):
+    def _walkOID(self, oid, ip):
         errorIndication, errorStatus, errorIndex, varBindTable = self._cmdGen.getCmd(
             cmdgen.CommunityData(self._securityName),
-            cmdgen.UdpTransportTarget((self._ip, self._port)),
+            cmdgen.UdpTransportTarget((ip, self._port)),
             oid,
             lexicographicMode=False
         )
@@ -145,10 +144,10 @@ class SNMPInspector(Inspector):
 
     def inspect_cpus(self, host):
         #get CPU Load
-        self._cpuTime = self._getValueFromOID(self._cpuTimeOid)
+        self._cpuTime = self._getValueFromOID(self._cpuTimeOid, host.ip_address)
 
         #get CPU Count
-        for varBindTableRow in self._walkOID(self._cpuTimeOid):
+        for varBindTableRow in self._walkOID(self._cpuTimeOid, host.ip_address):
             for name, val in varBindTableRow:
                 self._cpuNumber += 1
         if(self._cpuNumber != -1 and self._cpuTime != -1):
@@ -156,21 +155,21 @@ class SNMPInspector(Inspector):
 
     def inspect_ram(self, host):
         #get total Ram
-        self._ramTotal = self._getValueFromOID(self._ramTotalOid)
+        self._ramTotal = self._getValueFromOID(self._ramTotalOid, host.ip_address)
 
         #get used Ram
-        self._ramUsed = self._getValueFromOID(self._ramUsedOid)
+        self._ramUsed = self._getValueFromOID(self._ramUsedOid, host.ip_address)
 
         if(self._ramTotal != -1 and self._ramUsed != -1):
             return RAMStats(total=self._ramTotal, used=self._ramUsed)
 
     def inspect_disks(self, host):
-        diskIndexes = self._walkOID(self._diskIndexOid)
+        diskIndexes = self._walkOID(self._diskIndexOid, host.ip_address)
         diskStats = []
         for diskIndex in diskIndexes:
-            pathInd = self._getValueFromOID(self._diskPathOid + "." + diskIndex)
-            sizeInd = self._getValueFromOID(self._diskSizeOid + "." + diskIndex)
-            usedInd = self._getValueFromOID(self._diskUsedOid + "." + diskIndex)
+            pathInd = self._getValueFromOID(self._diskPathOid + "." + diskIndex, host.ip_address)
+            sizeInd = self._getValueFromOID(self._diskSizeOid + "." + diskIndex, host.ip_address)
+            usedInd = self._getValueFromOID(self._diskUsedOid + "." + diskIndex, host.ip_address)
             diskStats.append(DiskStats(path=pathInd, size=sizeInd, used=usedInd))
         return diskStats
 
@@ -178,11 +177,11 @@ class SNMPInspector(Inspector):
         netIntIndexes = self._walkOID(self._netIntIndexOid)
         netIntStats = []
         for netIntIndex in netIntIndexes:
-            nameInd = self._getValueFromOID(self._netIntNameOid + "." + netIntIndex)
-            bandwidthInd = self._getValueFromOID(self._netIntBandwidthOid + "." + netIntIndex)
-            receivedInd = self._getValueFromOID(self._netIntReceivedOid + "." + netIntIndex)
-            transmittedInd = self._getValueFromOID(self._netIntTransmittedOid + "." + netIntIndex)
-            errorInd = self._getValueFromOID(self._netIntErrorOid + "." + netIntIndex)
+            nameInd = self._getValueFromOID(self._netIntNameOid + "." + netIntIndex, host.ip_address)
+            bandwidthInd = self._getValueFromOID(self._netIntBandwidthOid + "." + netIntIndex, host.ip_address)
+            receivedInd = self._getValueFromOID(self._netIntReceivedOid + "." + netIntIndex, host.ip_address)
+            transmittedInd = self._getValueFromOID(self._netIntTransmittedOid + "." + netIntIndex, host.ip_address)
+            errorInd = self._getValueFromOID(self._netIntErrorOid + "." + netIntIndex, host.ip_address)
             netIntStats.append(NetIntStats(name=nameInd, bandwidth=bandwidthInd, received=receivedInd,
                 transmitted=transmittedInd, error=errorInd))
         return netIntStats
