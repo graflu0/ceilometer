@@ -1,5 +1,8 @@
-# Main virt inspector abstraction layering over the hypervisor API.
+# Main hardware inspector abstraction layering over the hypervisor API.
 #
+
+
+#TODO: update comments
 class Inspector(object):
 
     def inspect_cpus(self, host):
@@ -22,16 +25,16 @@ class Inspector(object):
 
     def inspect_ram(self, host):
         """
-        Inspect the ram statistics for an instance.
+        Inspect the ram statistics for a host.
 
-        :param instance_name: the name of the target instance
+        :param instance_name: the name of the target host
         :return: total RAM, used RAM
         """
         raise NotImplementedError()
 
     def inspect_netInt(self, host):
         """
-        Inspect the network interfaces for an instance.
+        Inspect the network interfaces for a host.
 
         :param instance_name: the name of the target instance
         :return: collection with NetIntStats ['name', 'bandwidth', 'used', 'in', 'out', 'error']

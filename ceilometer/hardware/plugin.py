@@ -31,5 +31,5 @@ class HardwarePollster(plugin.PollsterBase):
 
     @abc.abstractmethod
     def get_counters(self, manager, context):
-        """Return a sequence of Counter instances from polling the
+        """Return a sequence of Counter host from polling the
         resources."""

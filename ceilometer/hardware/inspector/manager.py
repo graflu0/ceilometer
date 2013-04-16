@@ -24,8 +24,8 @@ class InspectorManager(object):
         #TODO add more inspectors
         self._snmp_inspector = self._get_inspector(cfg.CONF.snmp_inspector)
 
-    def inspect_cpus(self, instance_name):
-        #TODO use config to check which inspector to take to check this instance
+    def inspect_cpus(self, host_name):
+        #TODO use config to check which inspector to take to check this host
         self._snmp_inspector.inspect_cpus("Test")
         pass
 

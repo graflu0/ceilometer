@@ -23,29 +23,29 @@ import datetime
 
 from ceilometer import counter
 from ceilometer.hardware import plugin
-from ceilometer.hardware import instance as hardware_instance
+from ceilometer.hardware import host as hardware_host
 from ceilometer.openstack.common import log
 from ceilometer.openstack.common import timeutils
 
 LOG = log.getLogger(__name__)
 
 
-def _instance_name(instance):
-    """Shortcut to get instance name"""
-    return getattr(instance, 'OS-EXT-SRV-ATTR:instance_name', None)
+def _host_name(host):
+    """Shortcut to get host name"""
+    return getattr(host, 'OS-EXT-SRV-ATTR:host', None)
 
 
-def make_counter_from_instance(instance, name, type, unit, volume):
+def make_counter_from_host(host, name, type, unit, volume):
     return counter.Counter(
         name=name,
         type=type,
         unit=unit,
         volume=volume,
-        user_id=instance.user_id,
-        project_id=instance.tenant_id,
-        resource_id=instance.id,
+        user_id=host.user_id,
+        project_id=host.tenant_id,
+        resource_id=host.id,
         timestamp=timeutils.isotime(),
-        resource_metadata=hardware_instance.get_metadata_from_object(instance),
+        resource_metadata=hardware_host.get_metadata_from_object(host),
     )
 
 class CPUPollster(plugin.HardwarePollster):
@@ -54,18 +54,18 @@ class CPUPollster(plugin.HardwarePollster):
 
     utilization_map = {}
 
-    def get_cpu_util(self, instance, cpu_info):
-        prev_times = self.utilization_map.get(instance.id)
-        self.utilization_map[instance.id] = (cpu_info.time,
+    def get_cpu_util(self, host, cpu_info):
+        prev_times = self.utilization_map.get(host.id)
+        self.utilization_map[host.id] = (cpu_info.time,
                                              datetime.datetime.now())
         cpu_util = 0.0
         if prev_times:
             prev_cpu = prev_times[0]
             prev_timestamp = prev_times[1]
-            delta = self.utilization_map[instance.id][1] - prev_timestamp
+            delta = self.utilization_map[host.id][1] - prev_timestamp
             elapsed = (delta.seconds * (10 ** 6) + delta.microseconds) * 1000
             cores_fraction = 1.0 / cpu_info.number
-            # account for cpu_time being reset when the instance is restarted
+            # account for cpu_time being reset when the host is restarted
             time_used = (cpu_info.time - prev_cpu
                          if prev_cpu <= cpu_info.time else cpu_info.time)
             cpu_util = 100 * cores_fraction * time_used / elapsed
@@ -75,14 +75,14 @@ class CPUPollster(plugin.HardwarePollster):
     def get_counter_names():
         return ['cpu', 'cpu_util']
 
-    def get_counters(self, manager, instance):
-        #TODO set instance Attributes
-        self.LOG.info('checking instance %s', instance.ip_address)
+    def get_counters(self, manager, host):
+        #TODO set host Attributes
+        self.LOG.info('checking host %s', host.ip_address)
         try:
-            cpu_info = manager.inspector_manager.inspect_cpus(instance)
+            cpu_info = manager.inspector_manager.inspect_cpus(host)
             self.LOG.info("CPUTIME USAGE: %s %d",
-                          instance.__dict__, cpu_info.time)
-            yield make_counter_from_instance(instance,
+                host.__dict__, cpu_info.time)
+            yield make_counter_from_host(host,
                                              name='cpu',
                                              type=counter.TYPE_CUMULATIVE,
                                              unit='ns',
@@ -90,5 +90,5 @@ class CPUPollster(plugin.HardwarePollster):
                                              )
         except Exception as err:
             self.LOG.error('could not get CPU time for %s: %s',
-                           instance, err)
+                host, err)
             self.LOG.exception(err)

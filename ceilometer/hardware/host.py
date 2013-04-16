@@ -22,7 +22,7 @@ class AgentOSNotSupportedException(HardwareInstanceException):
     pass
 
 
-class HardwareInstance(object):
+class HardwareHost(object):
     _ip_address = None
     _mac_address = None
     _name = None

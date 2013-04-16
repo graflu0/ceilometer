@@ -26,7 +26,7 @@ from ceilometer import agent
 from ceilometer import extension_manager
 from ceilometer.openstack.common import log
 from ceilometer.hardware.inspector import manager as inspector_manager
-from ceilometer.hardware.instance import HardwareInstance as Instance
+from ceilometer.hardware.host import HardwareHost as Host
 
 OPTS = [
     cfg.ListOpt('disabled_hardware_pollsters',
@@ -40,17 +40,17 @@ cfg.CONF.register_opts(OPTS)
 LOG = log.getLogger(__name__)
 
 class PollingTask(agent.PollingTask):
-    def poll_and_publish_instances(self, instances):
+    def poll_and_publish_hosts(self, hosts):
         with self.publish_context as publisher:
-            for instance in instances:
+            for host in hosts:
                 for pollster in self.pollsters:
                     try:
-                        #TODO get data from instances
+                        #TODO get data from hosts
                         LOG.info("Polling pollster %s", pollster.name)
-                        print(instance)
+                        print(host)
                         print(list(pollster.obj.get_counters(
                             self.manager,
-                            instance)))
+                            host)))
                     except Exception as err:
                         LOG.warning('Continue after error from %s: %s',
                             pollster.name, err)
@@ -59,16 +59,16 @@ class PollingTask(agent.PollingTask):
     def poll_and_publish(self):
         """if(self._hosts == None):
             self.hosts = self._get_all_hosts()"""
-        self.poll_and_publish_instances(self._get_all_hosts())
+        self.poll_and_publish_hosts(self._get_all_hosts())
 
     def _get_all_hosts(self):
         #TODO get hosts from cfg, list & return them
         host_ips = ["localhost", "10.0.0.2"]
 
-        hosts =[]
+        hosts = []
 
         for host in host_ips:
-            hosts.append(Instance(host))
+            hosts.append(Host(host))
 
         return hosts
 
