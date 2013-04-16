@@ -7,19 +7,19 @@ class Inspector(object):
 
     def inspect_cpus(self, host):
         """
-        Inspect the CPU statistics for an instance.
+        Inspect the CPU statistics for ahost.
 
-        :param instance_name: the name of the target instance
-        :return: the number of CPUs and cumulative CPU time
+        :param host: the target host
+        :return: 1 minute load, 5 minute load, 15 minute load
         """
         raise NotImplementedError()
 
     def inspect_disks(self, host):
         """
-        Inspect the disk statistics for an instance.
+        Inspect the disk statistics for a host.
 
-        :param instance_name: the name of the target instance
-        :return: collection with DiskStats (path, size, used)
+        :param : the target host
+        :return: collection with DiskStats ['path', 'size', 'used']
         """
         raise NotImplementedError()
 
@@ -27,7 +27,7 @@ class Inspector(object):
         """
         Inspect the ram statistics for a host.
 
-        :param instance_name: the name of the target host
+        :param : the target host
         :return: total RAM, used RAM
         """
         raise NotImplementedError()
@@ -36,7 +36,7 @@ class Inspector(object):
         """
         Inspect the network interfaces for a host.
 
-        :param instance_name: the name of the target instance
+        :param : the target host
         :return: collection with NetIntStats ['name', 'bandwidth', 'used', 'in', 'out', 'error']
         """
         raise NotImplementedError()

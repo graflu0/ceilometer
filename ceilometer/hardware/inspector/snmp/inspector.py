@@ -27,9 +27,11 @@ from ceilometer.hardware.inspector.inspector import Inspector
 # Named tuple representing CPU statistics.
 #
 # number: number of CPUs
-# time: cumulative CPU time
+# cpu1MinLoad: 1 minute load
+# cpu5MinLoad: 5 minute load
+# cpu15MinLoad: 15 minute load
 #
-CPUStats = collections.namedtuple('CPUStats', ['number', 'time'])
+CPUStats = collections.namedtuple('CPUStats', ['cpu1MinLoad', 'cpu5MinLoad', 'cpu15MinLoad'])
 
 # Named tuple representing RAM statistics.
 #
@@ -83,8 +85,9 @@ class SNMPInspector(Inspector):
         self._cmdGen = cmdgen.CommandGenerator()
 
         #CPU OIDs
-        self._cpuTimeOid = "1.3.6.1.4.1.2021.11.52.0"   # Raw system cpu time, # TODO: Set oids
-        self._hrProcessorTableOid = "1.3.6.1.2.1.25.3.3.1.2"    # hrProcessorTableOid
+        self._cpu1MinLoad = "1.3.6.1.4.1.2021.10.1.3.1"
+        self._cpu5MinLoad = "1.3.6.1.4.1.2021.10.1.3.2"
+        self._cpu15MinLoad = "1.3.6.1.4.1.2021.10.1.3.3"
         #RAM OIDs
         self._ramTotalOid = "1.3.6.1.4.1.2021.4.5.0"
         self._ramUsedOid = "1.3.6.1.4.1.2021.4.6.0"
@@ -100,11 +103,6 @@ class SNMPInspector(Inspector):
         self._netIntReceivedOid = "1.3.6.1.2.1.2.2.1.10"
         self._netIntTransmittedOid = "1.3.6.1.2.1.2.2.1.16"
         self._netIntErrorOid = "1.3.6.1.2.1.2.2.1.20"
-
-        self._cpuNumber = -1
-        self._cpuTime = -1
-        self._ramTotal = -1
-        self._ramUsed = -1
 
     def _getValueFromOID(self, oid, ip):
         errorIndication, errorStatus, errorIndex, varBinds = self._cmdGen.getCmd(
@@ -143,15 +141,16 @@ class SNMPInspector(Inspector):
                 return varBindTable
 
     def inspect_cpus(self, host):
-        #get CPU Load
-        self._cpuTime = self._getValueFromOID(self._cpuTimeOid, host.ip_address)
+        #get 1 minute load
+        cpu1MinLoadInd = self._getValueFromOID(self._cpu1MinLoad, host.ip_address)
 
-        #get CPU Count
-        for varBindTableRow in self._walkOID(self._cpuTimeOid, host.ip_address):
-            for name, val in varBindTableRow:
-                self._cpuNumber += 1
-        if(self._cpuNumber != -1 and self._cpuTime != -1):
-            return CPUStats(number=self._cpuNumber, time=self._cpuTime)
+        #get 5 minute load
+        cpu5MinLoadInd = self._getValueFromOID(self._cpu5MinLoad, host.ip_address)
+
+        #get 15 minute load
+        cpu15MinLoadInd = self._getValueFromOID(self._cpu15MinLoad, host.ip_address)
+
+        return CPUStats(cpu1MinLoad=cpu1MinLoadInd, cpu5MinLoad=cpu5MinLoadInd, cpu15MinLoad=cpu15MinLoadInd)
 
     def inspect_ram(self, host):
         #get total Ram
