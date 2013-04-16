@@ -2,13 +2,7 @@
 #
 class Inspector(object):
 
-    def inspect_instances(self):
-        """
-        List the instances on the current agent.
-        """
-        raise NotImplementedError()
-
-    def inspect_cpus(self, instance):
+    def inspect_cpus(self, host):
         """
         Inspect the CPU statistics for an instance.
 
@@ -17,17 +11,7 @@ class Inspector(object):
         """
         raise NotImplementedError()
 
-    def inspect_nics(self, instance_name):
-        """
-        Inspect the NIC statistics for an instance.
-
-        :param instance_name: the name of the target instance
-        :return: for each NIC, the number of bytes & packets
-                 received and transmitted
-        """
-        raise NotImplementedError()
-
-    def inspect_disks(self, instance_name):
+    def inspect_disks(self, host):
         """
         Inspect the disk statistics for an instance.
 
@@ -36,20 +20,20 @@ class Inspector(object):
         """
         raise NotImplementedError()
 
-    def inspect_ram(self, instance_name):
+    def inspect_ram(self, host):
         """
         Inspect the ram statistics for an instance.
 
         :param instance_name: the name of the target instance
         :return: total RAM, used RAM
         """
-    raise NotImplementedError()
+        raise NotImplementedError()
 
-    def inspect_netInt(self, instance_name):
+    def inspect_netInt(self, host):
         """
         Inspect the network interfaces for an instance.
 
         :param instance_name: the name of the target instance
         :return: collection with NetIntStats ['name', 'bandwidth', 'used', 'in', 'out', 'error']
         """
-    raise NotImplementedError()
+        raise NotImplementedError()

@@ -143,7 +143,7 @@ class SNMPInspector(Inspector):
             else:
                 return varBindTable
 
-    def inspect_cpus(self, instance):
+    def inspect_cpus(self, host):
         #get CPU Load
         self._cpuTime = self._getValueFromOID(self._cpuTimeOid)
 
@@ -154,7 +154,7 @@ class SNMPInspector(Inspector):
         if(self._cpuNumber != -1 and self._cpuTime != -1):
             return CPUStats(number=self._cpuNumber, time=self._cpuTime)
 
-    def inspect_ram(self, instance):
+    def inspect_ram(self, host):
         #get total Ram
         self._ramTotal = self._getValueFromOID(self._ramTotalOid)
 
@@ -164,7 +164,7 @@ class SNMPInspector(Inspector):
         if(self._ramTotal != -1 and self._ramUsed != -1):
             return RAMStats(total=self._ramTotal, used=self._ramUsed)
 
-    def inspect_disks(self, instance_name):
+    def inspect_disks(self, host):
         diskIndexes = self._walkOID(self._diskIndexOid)
         diskStats = []
         for diskIndex in diskIndexes:
@@ -174,7 +174,7 @@ class SNMPInspector(Inspector):
             diskStats.append(DiskStats(path=pathInd, size=sizeInd, used=usedInd))
         return diskStats
 
-    def inspect_netInt(self, instance_name):
+    def inspect_netInt(self, host):
         netIntIndexes = self._walkOID(self._netIntIndexOid)
         netIntStats = []
         for netIntIndex in netIntIndexes:
