@@ -10,15 +10,15 @@ LOG = log.getLogger(__name__)
 
 # Exception types
 #
-class HardwareInstanceException(Exception):
+class HardwareHostException(Exception):
     def __init__(self, message=None):
-        super(HardwareInstanceException, self).__init__(message)
+        super(HardwareHostException, self).__init__(message)
 
-
-class InstanceNotReachableException(HardwareInstanceException):
+#TODO an error might be better
+class InstanceNotReachableException(HardwareHostException):
     pass
 
-class AgentOSNotSupportedException(HardwareInstanceException):
+class AgentOSNotSupportedException(HardwareHostException):
     pass
 
 
@@ -26,15 +26,24 @@ class HardwareHost(object):
     _ip_address = None
     _mac_address = None
     _name = None
+    _disabled_pollsters = set()
+    _disabled_inspectors = []
 
-    def __init__(self, ip_address):
+
+
+    def __init__(self, ip_address, opts):
         self._ip_address = ip_address
+        print opts.get("disabled_pollsters")
+        #self._disabled_pollsters.add(set(opts.get("disabled_pollsters")))
+        print self._disabled_pollsters
+
         try:
             self._mac_address = self._get_mac_of_ip(ip_address)
         except InstanceNotReachableException as exception:
             LOG.warning("Instance with IP " +ip_address +" was not reachable")
             LOG.exception(exception)
-        #TODO release function get_name_from_ip
+
+            #TODO release function get_name_from_ip
         try:
             self._name=self._get_name_from_ip(ip_address)
         except Exception:
@@ -42,7 +51,7 @@ class HardwareHost(object):
 
 
     def _get_mac_of_ip(self, ip):
-        if (ip != "localhost") and (ip != "127.0.0.1"):
+        if (ip != "localhost") and (ip.startswith("127.")):
             if (os.name == "posix"):
                 try:
                     process = Popen(["ping", "-c","4", ip], stdout=PIPE)
@@ -64,7 +73,8 @@ class HardwareHost(object):
         return mac
 
     def _get_name_from_ip(self, ip):
-       print(socket.gethostbyaddr("localhost"))
+       #print(socket.gethostbyaddr("localhost"))
+        pass
 
     @property
     def ip_address(self):

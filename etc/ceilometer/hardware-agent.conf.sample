@@ -1,6 +1,6 @@
 # OsloConfig supports in a next release dictionaries
 
-hosts = { "192.168.1.1" :{"disabled_pollsters": "cpu, ram"
+hardware_hosts = { "192.168.1.1" :{"disabled_pollsters": "cpu, ram"
 			"disabled_inspectors": "snmp, smart"
 			"snmp"	: {"securityName":	"public"
 						"port":	161}}
