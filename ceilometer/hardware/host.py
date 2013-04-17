@@ -64,7 +64,7 @@ class HardwareHost(object):
         return mac
 
     def _get_name_from_ip(self, ip):
-       print(socket.gethostbyaddr("localhost"))
+       return socket.gethostbyaddr(ip)[0]
 
     @property
     def ip_address(self):
