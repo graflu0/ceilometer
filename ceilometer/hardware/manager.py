@@ -34,9 +34,13 @@ OPTS = [
         default=[],
         help='list of hardware agent pollsters to disable',
     ),
+    cfg.StrOpt('hardware_inspector_configurations',
+        default=[],
+        help='dictionary of global hardware inspector configurations',
+    ),
     cfg.StrOpt('hardware_hosts',
         default=[],
-        help='list of hardware agent pollsters to disable',
+        help='dictionary of hardware hosts and their configuration',
     )
     ]
 
@@ -50,12 +54,15 @@ class PollingTask(agent.PollingTask):
             for host in hosts:
                 for pollster in self.pollsters:
                     try:
-                        #TODO get data from hosts
                         LOG.info("Polling pollster %s", pollster.name)
-                        print(host)
+                        if not pollster.name in host.disabled_pollsters:
+                            #TODO get data from hosts
+                            print(host.disabled_pollsters)
+                            print(pollster.name)
                         """print(list(pollster.obj.get_counters(
                             self.manager,
                             host)))"""
+                        #print(host)
                     except Exception as err:
                         LOG.warning('Continue after error from %s: %s',
                             pollster.name, err)
@@ -66,8 +73,7 @@ class PollingTask(agent.PollingTask):
 
     def _get_all_hosts(self):
         hosts = []
-        obj = json.loads(cfg.CONF.hardware_hosts)
-        for ip_address, options in obj.iteritems():
+        for ip_address, options in json.loads(cfg.CONF.hardware_hosts).iteritems():
             hosts.append(Host(ip_address,options))
 
         return hosts
@@ -82,7 +88,11 @@ class AgentManager(agent.AgentManager):
                 disabled_names=cfg.CONF.disabled_hardware_pollsters,
             ),
         )
-        self._inspector_manager = inspector_manager.InspectorManager()
+        self._inspector_manager = inspector_manager.InspectorManager(self)
+        if cfg.CONF.hardware_inspector_configurations != None :
+            self._hardware_inspector_configurations = json.loads(cfg.CONF.hardware_inspector_configurations)
+        else:
+            self._hardware_inspector_configurations = {}
 
     def create_polling_task(self):
         return PollingTask(self)

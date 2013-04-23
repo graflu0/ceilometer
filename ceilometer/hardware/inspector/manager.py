@@ -20,7 +20,8 @@ cfg.CONF.register_opts(OPTS)
 
 class InspectorManager(object):
 
-    def __init__(self):
+    def __init__(self, agent_manager):
+        self._agent_manager=agent_manager
         #TODO add more inspectors
         self._snmp_inspector = self._get_inspector(cfg.CONF.snmp_inspector)
 
