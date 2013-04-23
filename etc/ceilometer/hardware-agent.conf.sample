@@ -1,12 +1,19 @@
-# OsloConfig supports in a next release dictionaries
+[DEFAULT]
 
-hardware_hosts = { "192.168.1.1" :{"disabled_pollsters": "cpu, ram"
-			"disabled_inspectors": "snmp, smart"
-			"snmp"	: {"securityName":	"public"
-						"port":	161}}
+#disabled_hardware_pollsters=network
 
-		"10.0.0.5" : {	"disabled_pollsters": "cpu, ram"
-						"disabled_inspectors": "snmp, smart"
-						"snmp"	: {"securityName":	"public"
-									"port":	161}}				
-		}
+hardware_inspector_configurations = {"snmp" : {"securityName": "public",
+						"port":	161},
+						"smart":{"port":8888}}
+
+hardware_hosts={"10.0.0.1" : 
+			{"disabled_pollsters": ["cpu"],
+				"disabled_inspectors": ["snmp", "smart"],
+				"inspector_configuration": {"snmp" : {"securityName": "public",
+						"port":	161}}},
+		"10.0.0.2" :{"disabled_inspectors": ["smart", "schubidu"],
+			"disabled_pollsters": ["network"],
+			"inspector_configurations": {"snmp" : {"securityName": "public",
+						"port":	161},
+						"smart":{"port":8888}}}}
+				
