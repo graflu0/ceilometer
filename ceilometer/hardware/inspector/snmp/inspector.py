@@ -81,32 +81,32 @@ class SNMPInspector(Inspector):
 
     def __init__(self):
         self._port = 161                             # TODO: Set Port
-        self._securityName = "public"
+        self._security_name = "public"
         self._cmdGen = cmdgen.CommandGenerator()
 
         #CPU OIDs
-        self._cpu1MinLoad = "1.3.6.1.4.1.2021.10.1.3.1"
-        self._cpu5MinLoad = "1.3.6.1.4.1.2021.10.1.3.2"
-        self._cpu15MinLoad = "1.3.6.1.4.1.2021.10.1.3.3"
+        self._cpu_1_min_load_oid = "1.3.6.1.4.1.2021.10.1.3.1"
+        self._cpu_5_min_load_oid = "1.3.6.1.4.1.2021.10.1.3.2"
+        self._cpu_15_min_load_oid = "1.3.6.1.4.1.2021.10.1.3.3"
         #RAM OIDs
-        self._ramTotalOid = "1.3.6.1.4.1.2021.4.5.0"
-        self._ramUsedOid = "1.3.6.1.4.1.2021.4.6.0"
+        self._ram_total_oid = "1.3.6.1.4.1.2021.4.5.0"
+        self._ram_used_oid = "1.3.6.1.4.1.2021.4.6.0"
         #Disk OIDs
-        self._diskIndexOid = "1.3.6.1.4.1.2021.9.1.1"
-        self._diskPathOid = "1.3.6.1.4.1.2021.9.1.2"
-        self._diskSizeOid = "1.3.6.1.4.1.2021.9.1.6"
-        self._diskUsedOid = "1.3.6.1.4.1.2021.9.1.8"
+        self._disk_index_oid = "1.3.6.1.4.1.2021.9.1.1"
+        self._disk_path_oid = "1.3.6.1.4.1.2021.9.1.2"
+        self._disk_size_oid = "1.3.6.1.4.1.2021.9.1.6"
+        self._disk_used_oid = "1.3.6.1.4.1.2021.9.1.8"
         #Network Interface OIDs
-        self._netIntIndexOid = "1.3.6.1.2.1.2.2.1.1"
-        self._netIntNameOid = "1.3.6.1.2.1.2.2.1.2"
-        self._netIntBandwidthOid = "1.3.6.1.2.1.2.2.1.5"
-        self._netIntReceivedOid = "1.3.6.1.2.1.2.2.1.10"
-        self._netIntTransmittedOid = "1.3.6.1.2.1.2.2.1.16"
-        self._netIntErrorOid = "1.3.6.1.2.1.2.2.1.20"
+        self._net_int_index_oid = "1.3.6.1.2.1.2.2.1.1"
+        self._net_int_name_oid = "1.3.6.1.2.1.2.2.1.2"
+        self._net_int_bandwidth_oid = "1.3.6.1.2.1.2.2.1.5"
+        self._net_int_received_oid = "1.3.6.1.2.1.2.2.1.10"
+        self._net_int_transmitted_oid = "1.3.6.1.2.1.2.2.1.16"
+        self._net_int_error_oid = "1.3.6.1.2.1.2.2.1.20"
 
     def _getValueFromOID(self, oid, ip):
         errorIndication, errorStatus, errorIndex, varBinds = self._cmdGen.getCmd(
-            cmdgen.CommunityData(self._securityName),
+            cmdgen.CommunityData(self._security_name),
             cmdgen.UdpTransportTarget((ip, self._port)),
             oid
         )
@@ -124,7 +124,7 @@ class SNMPInspector(Inspector):
 
     def _walkOID(self, oid, ip):
         errorIndication, errorStatus, errorIndex, varBindTable = self._cmdGen.getCmd(
-            cmdgen.CommunityData(self._securityName),
+            cmdgen.CommunityData(self._security_name),
             cmdgen.UdpTransportTarget((ip, self._port)),
             oid,
             lexicographicMode=False
@@ -142,45 +142,44 @@ class SNMPInspector(Inspector):
 
     def inspect_cpus(self, host):
         #get 1 minute load
-        cpu1MinLoadInd = self._getValueFromOID(self._cpu1MinLoad, host.ip_address)
+        cpu_1_min_load_Ind = self._getValueFromOID(self._cpu_1_min_load_oid, host.ip_address)
 
         #get 5 minute load
-        cpu5MinLoadInd = self._getValueFromOID(self._cpu5MinLoad, host.ip_address)
+        cpu_5_min_load_ind = self._getValueFromOID(self._cpu_5_min_load_oid, host.ip_address)
 
         #get 15 minute load
-        cpu15MinLoadInd = self._getValueFromOID(self._cpu15MinLoad, host.ip_address)
+        cpu_15_min_load_ind = self._getValueFromOID(self._cpu_15_min_load_oid, host.ip_address)
 
-        return CPUStats(cpu1MinLoad=cpu1MinLoadInd, cpu5MinLoad=cpu5MinLoadInd, cpu15MinLoad=cpu15MinLoadInd)
+        return CPUStats(cpu1MinLoad=cpu_1_min_load_Ind, cpu5MinLoad=cpu_5_min_load_ind, cpu15MinLoad=cpu_15_min_load_ind)
 
     def inspect_ram(self, host):
         #get total Ram
-        self._ramTotal = self._getValueFromOID(self._ramTotalOid, host.ip_address)
+        ram_total = self._getValueFromOID(self._ram_total_oid, host.ip_address)
 
         #get used Ram
-        self._ramUsed = self._getValueFromOID(self._ramUsedOid, host.ip_address)
+        ram_used = self._getValueFromOID(self._ram_used_oid, host.ip_address)
 
-        if(self._ramTotal != -1 and self._ramUsed != -1):
-            return RAMStats(total=self._ramTotal, used=self._ramUsed)
+        return RAMStats(total=ram_total, used=ram_used)
 
     def inspect_disks(self, host):
-        diskIndexes = self._walkOID(self._diskIndexOid, host.ip_address)
-        diskStats = []
-        for diskIndex in diskIndexes:
-            pathInd = self._getValueFromOID(self._diskPathOid + "." + diskIndex, host.ip_address)
-            sizeInd = self._getValueFromOID(self._diskSizeOid + "." + diskIndex, host.ip_address)
-            usedInd = self._getValueFromOID(self._diskUsedOid + "." + diskIndex, host.ip_address)
-            diskStats.append(DiskStats(path=pathInd, size=sizeInd, used=usedInd))
-        return diskStats
+        disk_indexes = self._walkOID(self._disk_index_oid, host.ip_address)
+        disk_stats = []
+        for disk_index in disk_indexes:
+            disk_path = self._getValueFromOID(self._disk_path_oid + "." + disk_index, host.ip_address)
+            disk_size = self._getValueFromOID(self._disk_size_oid + "." + disk_index, host.ip_address)
+            disk_used = self._getValueFromOID(self._disk_used_oid + "." + disk_index, host.ip_address)
+            disk_stats.append(DiskStats(path=disk_path, size=disk_size, used=disk_used))
+        return disk_stats
 
     def inspect_netInt(self, host):
-        netIntIndexes = self._walkOID(self._netIntIndexOid)
-        netIntStats = []
-        for netIntIndex in netIntIndexes:
-            nameInd = self._getValueFromOID(self._netIntNameOid + "." + netIntIndex, host.ip_address)
-            bandwidthInd = self._getValueFromOID(self._netIntBandwidthOid + "." + netIntIndex, host.ip_address)
-            receivedInd = self._getValueFromOID(self._netIntReceivedOid + "." + netIntIndex, host.ip_address)
-            transmittedInd = self._getValueFromOID(self._netIntTransmittedOid + "." + netIntIndex, host.ip_address)
-            errorInd = self._getValueFromOID(self._netIntErrorOid + "." + netIntIndex, host.ip_address)
-            netIntStats.append(NetIntStats(name=nameInd, bandwidth=bandwidthInd, received=receivedInd,
-                transmitted=transmittedInd, error=errorInd))
-        return netIntStats
+        net_int_indexes = self._walkOID(self._net_int_index_oid)
+        net_int_stats = []
+        for net_int_index in net_int_indexes:
+            net_int_name = self._getValueFromOID(self._net_int_name_oid + "." + net_int_index, host.ip_address)
+            net_int_bandwidth = self._getValueFromOID(self._net_int_bandwidth_oid + "." + net_int_index, host.ip_address)
+            net_int_received = self._getValueFromOID(self._net_int_received_oid + "." + net_int_index, host.ip_address)
+            net_int_transmitted = self._getValueFromOID(self._net_int_transmitted_oid + "." + net_int_index, host.ip_address)
+            net_int_error = self._getValueFromOID(self._net_int_error_oid + "." + net_int_index, host.ip_address)
+            net_int_stats.append(NetIntStats(name=net_int_name, bandwidth=net_int_bandwidth, received=net_int_received,
+                transmitted=net_int_transmitted, error=net_int_error))
+        return net_int_stats
