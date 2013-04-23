@@ -20,17 +20,16 @@ cfg.CONF.register_opts(OPTS)
 
 class InspectorManager(object):
 
-    def __init__(self, agent_manager):
-        self._agent_manager=agent_manager
+    def __init__(self, global_conf):
         #TODO add more inspectors
-        self._snmp_inspector = self._get_inspector(cfg.CONF.snmp_inspector)
+        self._snmp_inspector = self._get_inspector(cfg.CONF.snmp_inspector, global_conf)
 
-    def inspect_cpus(self, host_name):
+    def inspect_cpus(self, host):
         #TODO use config to check which inspector to take to check this host
-        self._snmp_inspector.inspect_cpus("Test")
+        self._snmp_inspector.inspect_cpus(host)
         pass
 
-    def _get_inspector(self, inspector_type):
+    def _get_inspector(self, inspector_type, global_conf):
         try:
             namespace = 'ceilometer.hardware.inspectors'
             mgr = driver.DriverManager(namespace,
@@ -40,4 +39,7 @@ class InspectorManager(object):
         except ImportError as e:
             LOG.error("Unable to load the hypervisor inspector: %s" % (e))
             #TODO generalize Inspector
-            return snmp_inspector.Inspector()
+            if(global_conf):
+                return snmp_inspector.Inspector(global_conf.get("snmp"))
+            else:
+                return snmp_inspector.Inspector()
