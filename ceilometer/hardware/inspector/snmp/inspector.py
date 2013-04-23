@@ -144,6 +144,22 @@ class SNMPInspector(Inspector):
             else:
                 return varBindTable
 
+        def _get_port(self, host):
+            port = None
+        if host.inspector_configurations.get("snmp"):
+            port = host.inspector_configurations.get("snmp").get("port")
+        if not port:
+            port = self._port
+        return port
+
+    def _get_security_name(self, host):
+        security_name = None
+        if host.inspector_configurations.get("snmp"):
+            security_name = host.inspector_configurations.get("snmp").get("securityName")
+        if not security_name:
+            security_name = self._security_name
+        return security_name
+
     def inspect_cpus(self, host):
         #get 1 minute load
         cpu_1_min_load_Ind = self._get_value_from_oid(self._cpu_1_min_load_oid, host.ip_address)
@@ -188,19 +204,3 @@ class SNMPInspector(Inspector):
             net_int_stats.append(NetIntStats(name=net_int_name, bandwidth=net_int_bandwidth, received=net_int_received,
                                  transmitted=net_int_transmitted, error=net_int_error))
         return net_int_stats
-
-    def _get_port(self, host):
-        port = None
-        if host.inspector_configurations.get("snmp"):
-            port = host.inspector_configurations.get("snmp").get("port")
-        if not port:
-            port = self._port
-        return port
-
-    def _get_security_name(self, host):
-        security_name = None
-        if host.inspector_configurations.get("snmp"):
-            security_name = host.inspector_configurations.get("snmp").get("securityName")
-        if not security_name:
-            security_name = self._security_name
-        return security_name
