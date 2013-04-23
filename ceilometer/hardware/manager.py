@@ -35,11 +35,11 @@ OPTS = [
         help='list of hardware agent pollsters to disable',
     ),
     cfg.StrOpt('hardware_inspector_configurations',
-        default=[],
+        default=None,
         help='dictionary of global hardware inspector configurations',
     ),
     cfg.StrOpt('hardware_hosts',
-        default=[],
+        default=None,
         help='dictionary of hardware hosts and their configuration',
     )
     ]
@@ -88,11 +88,11 @@ class AgentManager(agent.AgentManager):
                 disabled_names=cfg.CONF.disabled_hardware_pollsters,
             ),
         )
-        self._inspector_manager = inspector_manager.InspectorManager(self)
         if cfg.CONF.hardware_inspector_configurations != None :
-            self._hardware_inspector_configurations = json.loads(cfg.CONF.hardware_inspector_configurations)
+            hardware_inspector_configurations = json.loads(cfg.CONF.hardware_inspector_configurations)
         else:
-            self._hardware_inspector_configurations = {}
+            hardware_inspector_configurations = None
+        self._inspector_manager = inspector_manager.InspectorManager(hardware_inspector_configurations)
 
     def create_polling_task(self):
         return PollingTask(self)
