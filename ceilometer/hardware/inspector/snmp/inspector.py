@@ -154,7 +154,7 @@ class SNMPInspector(Inspector):
 
         #get 15 minute load
         cpu_15_min_load_ind = self._get_value_from_oid(self._cpu_15_min_load_oid, host)
-        test= CPUStats(0,2,5)
+
         return CPUStats(cpu1MinLoad=cpu_1_min_load_Ind, cpu5MinLoad=cpu_5_min_load_ind,
                         cpu15MinLoad=cpu_15_min_load_ind)
 
