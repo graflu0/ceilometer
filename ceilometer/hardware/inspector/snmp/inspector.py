@@ -147,18 +147,17 @@ class SNMPInspector(Inspector):
     def inspect_cpus(self, host):
 
         #TODO host.inspector_configurations could be None
-#        #get 1 minute load
-#        cpu_1_min_load_Ind = self._get_value_from_oid(self._cpu_1_min_load_oid, host)
-#
-#        #get 5 minute load
-#        cpu_5_min_load_ind = self._get_value_from_oid(self._cpu_5_min_load_oid, host)
-#
-#        #get 15 minute load
-#        cpu_15_min_load_ind = self._get_value_from_oid(self._cpu_15_min_load_oid, host)
+        #get 1 minute load
+        cpu_1_min_load_Ind = self._get_value_from_oid(self._cpu_1_min_load_oid, host)
+
+        #get 5 minute load
+        cpu_5_min_load_ind = self._get_value_from_oid(self._cpu_5_min_load_oid, host)
+
+        #get 15 minute load
+        cpu_15_min_load_ind = self._get_value_from_oid(self._cpu_15_min_load_oid, host)
         test= CPUStats(0,2,5)
-        return test
-#        return CPUStats(cpu1MinLoad=cpu_1_min_load_Ind, cpu5MinLoad=cpu_5_min_load_ind,
-#                        cpu15MinLoad=cpu_15_min_load_ind)
+        return CPUStats(cpu1MinLoad=cpu_1_min_load_Ind, cpu5MinLoad=cpu_5_min_load_ind,
+                        cpu15MinLoad=cpu_15_min_load_ind)
 
     def inspect_ram(self, host):
         #get total Ram
@@ -194,7 +193,7 @@ class SNMPInspector(Inspector):
 
     def _get_port(self, host):
         port = None
-        if host.inspector_configurations.get("snmp"):
+        if host.inspector_configurations and host.inspector_configurations.get("snmp"):
             port = host.inspector_configurations.get("snmp").get("port")
         if not port:
             port = self._port
@@ -202,7 +201,7 @@ class SNMPInspector(Inspector):
 
     def _get_security_name(self, host):
         security_name = None
-        if host.inspector_configurations.get("snmp"):
+        if host.inspector_configurations and host.inspector_configurations.get("snmp"):
             security_name = host.inspector_configurations.get("snmp").get("securityName")
         if not security_name:
             security_name = self._security_name
