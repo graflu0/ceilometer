@@ -29,20 +29,14 @@ from ceilometer.openstack.common import timeutils
 
 LOG = log.getLogger(__name__)
 
-
-def _host_name(host):
-    """Shortcut to get host name"""
-    return getattr(host, 'OS-EXT-SRV-ATTR:host', None)
-
-
 def make_counter_from_host(host, name, type, unit, volume):
     return counter.Counter(
         name=name,
         type=type,
         unit=unit,
         volume=volume,
-        user_id=host.user_id,
-        project_id=host.tenant_id,
+        user_id='hardware_stuff',
+        project_id='hardware_project',
         resource_id=host.id,
         timestamp=timeutils.isotime(),
         resource_metadata=hardware_host.get_metadata_from_object(host),
@@ -73,22 +67,51 @@ class CPUPollster(plugin.HardwarePollster):
 
     @staticmethod
     def get_counter_names():
-        return ['cpu', 'cpu_util']
+        return ['cpu_util_1_min', 'cpu_util_5_min', 'cpu_util_15_min']
 
     def get_counters(self, manager, host):
         #TODO set host Attributes
         self.LOG.info('checking host %s', host.ip_address)
         try:
-
             cpu_info = manager.inspector_manager.inspect_cpus(host)
-#            self.LOG.info("CPUTIME USAGE: %s %d",
-#                host.__dict__, cpu_info.time)
-#            yield make_counter_from_host(host,
-#                                             name='cpu',
-#                                             type=counter.TYPE_CUMULATIVE,
-#                                             unit='ns',
-#                                             volume=cpu_info.time,
-#                                             )
+
+            cpu_util_1_min = cpu_info.cpu1MinLoad
+            self.LOG.info("CPU UTILIZATION %% last minute: %s %0.2f",
+                host.__dict__, cpu_util_1_min)
+
+            cpu_util_5_min = cpu_info.cpu5MinLoad
+            self.LOG.info("CPU UTILIZATION %% last minute: %s %0.2f",
+                host.__dict__, cpu_util_5_min)
+
+            cpu_util_15_min = cpu_info.cpu15MinLoad
+            self.LOG.info("CPU UTILIZATION %% last minute: %s %0.2f",
+                host.__dict__, cpu_util_15_min)
+
+#            yield cpu_util_1_min
+#            yield cpu_util_5_min
+#            yield cpu_util_15_min
+
+            yield make_counter_from_host(host,
+                name='cpu_util_1_min',
+                type=counter.TYPE_GAUGE,
+                unit='%',
+                volume=cpu_util_1_min,
+            )
+
+            yield make_counter_from_host(host,
+                name='cpu_util_5_min',
+                type=counter.TYPE_GAUGE,
+                unit='%',
+                volume=cpu_util_5_min,
+            )
+
+            yield make_counter_from_host(host,
+                name='cpu_util_15_min',
+                type=counter.TYPE_GAUGE,
+                unit='%',
+                volume=cpu_util_15_min,
+            )
+
         except Exception as err:
             self.LOG.error('could not get CPU time for %s: %s',
                 host, err)

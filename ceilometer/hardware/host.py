@@ -21,18 +21,30 @@ class InstanceNotReachableException(HardwareInstanceException):
 class AgentOSNotSupportedException(HardwareInstanceException):
     pass
 
+def get_metadata_from_object(host):
+    """Return a metadata dictionary for the instance.
+    """
+    metadata = {
+        'display_name': 'dummy_name'
+        }
+    #print metadata
+#    for name in INSTANCE_PROPERTIES:
+#        metadata[name] = getattr(host, name, u'')
+    return metadata
+
 
 class HardwareHost(object):
 
     def __init__(self, ip_address, opts):
         self._ip_address = ip_address
         #TODO: improve getting mac & name
+        self._mac_address="000000ffffff"
 #        try:
 #            self._mac_address = self._get_mac_of_ip(ip_address)
 #        except InstanceNotReachableException as exception:
 #            LOG.warning("Instance with IP " +ip_address +" was not reachable")
 #            LOG.exception(exception)
-#
+
 #        #TODO: exception handling
 #        try:
 #            self._name=self._get_name_from_ip(ip_address)
@@ -87,6 +99,10 @@ class HardwareHost(object):
     @property
     def ip_address(self):
         return self._ip_address
+
+    @property
+    def id(self):
+        return self._mac_address
 
     @property
     def name(self):

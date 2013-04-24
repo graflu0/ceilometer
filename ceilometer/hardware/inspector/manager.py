@@ -26,8 +26,7 @@ class InspectorManager(object):
 
     def inspect_cpus(self, host):
         #TODO use config to check which inspector to take to check this host
-        self._snmp_inspector.inspect_cpus(host)
-        pass
+        return self._snmp_inspector.inspect_cpus(host)
 
     def _get_inspector(self, inspector_type, global_conf):
         try:
