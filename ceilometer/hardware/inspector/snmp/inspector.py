@@ -161,17 +161,20 @@ class SNMPInspector(Inspector):
         return security_name
 
     def inspect_cpus(self, host):
-        #get 1 minute load
-        cpu_1_min_load_Ind = self._get_value_from_oid(self._cpu_1_min_load_oid, host.ip_address)
 
-        #get 5 minute load
-        cpu_5_min_load_ind = self._get_value_from_oid(self._cpu_5_min_load_oid, host.ip_address)
-
-        #get 15 minute load
-        cpu_15_min_load_ind = self._get_value_from_oid(self._cpu_15_min_load_oid, host.ip_address)
-
-        return CPUStats(cpu1MinLoad=cpu_1_min_load_Ind, cpu5MinLoad=cpu_5_min_load_ind,
-                        cpu15MinLoad=cpu_15_min_load_ind)
+        #TODO host.inspector_configurations could be None
+#        #get 1 minute load
+#        cpu_1_min_load_Ind = self._get_value_from_oid(self._cpu_1_min_load_oid, host)
+#
+#        #get 5 minute load
+#        cpu_5_min_load_ind = self._get_value_from_oid(self._cpu_5_min_load_oid, host)
+#
+#        #get 15 minute load
+#        cpu_15_min_load_ind = self._get_value_from_oid(self._cpu_15_min_load_oid, host)
+        test= CPUStats(0,2,5)
+        return test
+#        return CPUStats(cpu1MinLoad=cpu_1_min_load_Ind, cpu5MinLoad=cpu_5_min_load_ind,
+#                        cpu15MinLoad=cpu_15_min_load_ind)
 
     def inspect_ram(self, host):
         #get total Ram
