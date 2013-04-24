@@ -146,7 +146,6 @@ class SNMPInspector(Inspector):
 
     def inspect_cpus(self, host):
 
-        #TODO host.inspector_configurations could be None
         #get 1 minute load
         cpu_1_min_load_Ind = self._get_value_from_oid(self._cpu_1_min_load_oid, host)
 
