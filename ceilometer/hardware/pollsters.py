@@ -79,15 +79,16 @@ class CPUPollster(plugin.HardwarePollster):
         #TODO set host Attributes
         self.LOG.info('checking host %s', host.ip_address)
         try:
+
             cpu_info = manager.inspector_manager.inspect_cpus(host)
-            self.LOG.info("CPUTIME USAGE: %s %d",
-                host.__dict__, cpu_info.time)
-            yield make_counter_from_host(host,
-                                             name='cpu',
-                                             type=counter.TYPE_CUMULATIVE,
-                                             unit='ns',
-                                             volume=cpu_info.time,
-                                             )
+#            self.LOG.info("CPUTIME USAGE: %s %d",
+#                host.__dict__, cpu_info.time)
+#            yield make_counter_from_host(host,
+#                                             name='cpu',
+#                                             type=counter.TYPE_CUMULATIVE,
+#                                             unit='ns',
+#                                             volume=cpu_info.time,
+#                                             )
         except Exception as err:
             self.LOG.error('could not get CPU time for %s: %s',
                 host, err)

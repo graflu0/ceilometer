@@ -27,19 +27,19 @@ class HardwareHost(object):
     def __init__(self, ip_address, opts):
         self._ip_address = ip_address
         #TODO: improve getting mac & name
-        try:
-            self._mac_address = self._get_mac_of_ip(ip_address)
-        except InstanceNotReachableException as exception:
-            LOG.warning("Instance with IP " +ip_address +" was not reachable")
-            LOG.exception(exception)
+#        try:
+#            self._mac_address = self._get_mac_of_ip(ip_address)
+#        except InstanceNotReachableException as exception:
+#            LOG.warning("Instance with IP " +ip_address +" was not reachable")
+#            LOG.exception(exception)
+#
+#        #TODO: exception handling
+#        try:
+#            self._name=self._get_name_from_ip(ip_address)
+#        except Exception:
+#            pass
 
-        #TODO: exception handling
-        try:
-            self._name=self._get_name_from_ip(ip_address)
-        except Exception:
-            pass
-
-        self._set_configuration(opts)
+        self._set_configurations(opts)
 
 
     def _get_mac_of_ip(self, ip):
@@ -67,7 +67,7 @@ class HardwareHost(object):
     def _get_name_from_ip(self, ip):
        return socket.gethostbyaddr(ip)[0]
 
-    def _set_configuration(self, opts):
+    def _set_configurations(self, opts):
         if  opts.get("disabled_pollsters") != None:
             self._disabled_pollsters = opts.get("disabled_pollsters")
         else :
@@ -101,5 +101,5 @@ class HardwareHost(object):
         return self.disabled_inspectors
 
     @property
-    def inspector_configuration(self):
-        return self._inspector_configuration
+    def inspector_configurations(self):
+        return self._inspector_configurations
