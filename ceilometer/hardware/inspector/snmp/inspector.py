@@ -155,12 +155,8 @@ class SNMPInspector(Inspector):
         #get 15 minute load
         cpu_15_min_load_ind = self._get_value_from_oid(self._cpu_15_min_load_oid, host)
 
-        print cpu_1_min_load_ind
-        print cpu_5_min_load_ind
-
-        print type(cpu_1_min_load_ind)
-        return CPUStats(cpu1MinLoad=cpu_1_min_load_ind, cpu5MinLoad=cpu_5_min_load_ind,
-                        cpu15MinLoad=cpu_15_min_load_ind)
+        return CPUStats(cpu1MinLoad=cpu_1_min_load_ind.__str__(), cpu5MinLoad=cpu_5_min_load_ind.__str__(),
+                        cpu15MinLoad=cpu_15_min_load_ind.__str__())
 
     def inspect_ram(self, host):
         #get total Ram
@@ -178,7 +174,7 @@ class SNMPInspector(Inspector):
             disk_path = self._get_value_from_oid(self._disk_path_oid + "." + disk_index, host)
             disk_size = self._get_value_from_oid(self._disk_size_oid + "." + disk_index, host)
             disk_used = self._get_value_from_oid(self._disk_used_oid + "." + disk_index, host)
-            disk_stats.append(DiskStats(path=disk_path, size=disk_size, used=disk_used))
+            disk_stats.append(DiskStats(path=disk_path.__str__(), size=disk_size, used=disk_used.__str__()))
         return disk_stats
 
     def inspect_netInt(self, host):
@@ -190,8 +186,9 @@ class SNMPInspector(Inspector):
             net_int_received = self._get_value_from_oid(self._net_int_received_oid + "." + net_int_index, host)
             net_int_transmitted = self._get_value_from_oid(self._net_int_transmitted_oid + "." + net_int_index, host)
             net_int_error = self._get_value_from_oid(self._net_int_error_oid + "." + net_int_index, host)
-            net_int_stats.append(NetIntStats(name=net_int_name, bandwidth=net_int_bandwidth, received=net_int_received,
-                                 transmitted=net_int_transmitted, error=net_int_error))
+            net_int_stats.append(NetIntStats(name=net_int_name.__str__(), bandwidth=net_int_bandwidth.__str__(),
+                                 received=net_int_received.__str__(), transmitted=net_int_transmitted.__str__(),
+                                error=net_int_error.__str__()))
         return net_int_stats
 
     def _get_port(self, host):
