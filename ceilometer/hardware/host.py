@@ -91,7 +91,7 @@ class HardwareHost(object):
         else:
             self._disabled_inspectors = []
 
-        if opts.get("inspector_configuration") != None:
+        if opts.get("inspector_configurations") != None:
             self._inspector_configurations = opts.get("inspector_configurations")
         else:
             self._inspector_configurations={}
