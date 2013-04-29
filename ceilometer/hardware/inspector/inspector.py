@@ -40,3 +40,7 @@ class Inspector(object):
         :return: collection with NetIntStats ['name', 'bandwidth', 'used', 'in', 'out', 'error']
         """
         raise NotImplementedError()
+        
+    def set_inspector_configuration(config):
+        #TODO: set configuration
+        pass

@@ -3,6 +3,7 @@ from stevedore import driver
 
 from ceilometer.openstack.common import log
 from ceilometer.hardware.inspector.snmp import inspector as snmp_inspector
+from ceilometer.hardware.inspector import inspector as inspector_interface
 
 
 LOG = log.getLogger(__name__)
@@ -34,11 +35,13 @@ class InspectorManager(object):
             mgr = driver.DriverManager(namespace,
                 inspector_type,
                 invoke_on_load=True)
-            return mgr.driver
+            inspector = mgr.driver
+            inspector.set_configuration(global_conf.get(cfg.CONF.snmp_inspector))
+            return inspector
         except ImportError as e:
             LOG.error("Unable to load the hypervisor inspector: %s" % (e))
-            #TODO generalize Inspector
+            #TODO set configuration
+            generic_inspector = inspector_interface.Inspector()
             if(global_conf):
-                return snmp_inspector.Inspector(global_conf.get("snmp"))
-            else:
-                return snmp_inspector.Inspector()
+                generic_inspector.set_config(global_conf.get(cfg.CONF.snmp_inspector))
+            return generic_inspector
