@@ -9,7 +9,7 @@ hardware_inspector_configurations = {"snmp" : {"securityName": "public",
 hardware_hosts={"10.0.0.1" : 
 			{"disabled_pollsters": ["cpu"],
 				"disabled_inspectors": ["snmp", "smart"],
-				"inspector_configuration": {"snmp" : {"securityName": "public",
+				"inspector_configurations": {"snmp" : {"securityName": "public",
 						"port":	161}}},
 		"10.0.0.2" :{"disabled_inspectors": ["smart", "schubidu"],
 			"disabled_pollsters": ["network"],
