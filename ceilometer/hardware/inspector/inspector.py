@@ -41,6 +41,5 @@ class Inspector(object):
         """
         raise NotImplementedError()
         
-    def set_inspector_configuration(config):
-        #TODO: set configuration
-        pass
+    def set_configuration(self, config):
+        raise NotImplementedError()

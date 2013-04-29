@@ -78,15 +78,9 @@ class InstanceNotFoundException(InspectorException):
 LOG = logging.getLogger(__name__)
 
 class SNMPInspector(Inspector):
-    def __init__(self, global_conf=None):
+    def __init__(self):
         self._port = 161                             # Default snmp port
         self._security_name = "public"               # Default security name
-        if global_conf:
-            if global_conf.get("port"):
-                self._port = global_conf.get("port")
-            if global_conf.get("securityName"):
-                self._security_name = global_conf.get("securityName")
-
         self._cmdGen = cmdgen.CommandGenerator()
         #CPU OIDs
         self._cpu_1_min_load_oid = "1.3.6.1.4.1.2021.10.1.3.1"
@@ -191,18 +185,23 @@ class SNMPInspector(Inspector):
                                 error=net_int_error.__str__()))
         return net_int_stats
 
+    def set_configuration(self, config):
+        self._config = config
+
     def _get_port(self, host):
-        port = None
-        if host.inspector_configurations and host.inspector_configurations.get("snmp"):
+        if host.inspector_configurations and host.inspector_configurations.get("snmp") and host.inspector_configurations.get("snmp").get("port"):
             port = host.inspector_configurations.get("snmp").get("port")
-        if not port:
+        elif self._config and self._config.get("port"):
+            port = self._config.get("port")
+        else:
             port = self._port
         return port
 
     def _get_security_name(self, host):
-        security_name = None
-        if host.inspector_configurations and host.inspector_configurations.get("snmp"):
+        if host.inspector_configurations and host.inspector_configurations.get("snmp") and host.inspector_configurations.get("snmp").get("securityName"):
             security_name = host.inspector_configurations.get("snmp").get("securityName")
-        if not security_name:
+        elif self._config and self._config.get("securityName"):
+            security_name = self._config.get("securityName")
+        else:
             security_name = self._security_name
         return security_name
