@@ -17,67 +17,21 @@
 # under the License.
 """Inspector abstraction for read-only access to hypervisors"""
 
-import collections
+
 from ceilometer.openstack.common import log as logging
 from pysnmp.entity.rfc3413.oneliner import cmdgen
-from ceilometer.hardware.inspector.inspector import Inspector
-
-#TODO: Named to Inspector?
-
-# Named tuple representing CPU statistics.
-#
-# number: number of CPUs
-# cpu1MinLoad: 1 minute load
-# cpu5MinLoad: 5 minute load
-# cpu15MinLoad: 15 minute load
-#
-CPUStats = collections.namedtuple('CPUStats', ['cpu1MinLoad', 'cpu5MinLoad', 'cpu15MinLoad'])
-
-# Named tuple representing RAM statistics.
-#
-# total: Total RAM
-# used: Used RAM
-# free: Free RAM
-#
-RAMStats = collections.namedtuple('RAMStats', ['total', 'used'])
-
-
-# Named tuple representing disk statistics.
-#
-# description: storage description
-# size: storage size (kBytes)
-# used: storage used
-#
-DiskStats = collections.namedtuple('DiskStats',
-    ['path', 'size', 'used'])
-
-
-# Named tuple representing network interface statistics.
-#
-# name: name of the network interface
-# bandwidth: current bandwidth (bit/s)
-# received: total number of octets received
-# transmitted: total number of octets transmitted
-# error: number of outbound packets that could not be transmitted because of errors
-#
-NetIntStats = collections.namedtuple('NetIntStats',
-    ['name', 'bandwidth', 'used', 'received', 'transmitted', 'error'])
+from ceilometer.hardware.inspector import inspector as hardware_inspector
 
 # Exception types
 #
 
 
-class InspectorException(Exception):
-    def __init__(self, message=None):
-        super(InspectorException, self).__init__(message)
-
-
-class InstanceNotFoundException(InspectorException):
+class InstanceSNMPEndPointUnreachableException(hardware_inspector.InspectorException):
     pass
 
 LOG = logging.getLogger(__name__)
 
-class SNMPInspector(Inspector):
+class SNMPInspector(hardware_inspector.Inspector):
     def __init__(self):
         self._port = 161                             # Default snmp port
         self._security_name = "public"               # Default security name
@@ -138,7 +92,7 @@ class SNMPInspector(Inspector):
             else:
                 return varBindTable
 
-    def inspect_cpus(self, host):
+    def inspect_cpu(self, host):
 
         #get 1 minute load
         cpu_1_min_load_ind = self._get_value_from_oid(self._cpu_1_min_load_oid, host)
@@ -149,7 +103,7 @@ class SNMPInspector(Inspector):
         #get 15 minute load
         cpu_15_min_load_ind = self._get_value_from_oid(self._cpu_15_min_load_oid, host)
 
-        return CPUStats(cpu1MinLoad=cpu_1_min_load_ind.__str__(), cpu5MinLoad=cpu_5_min_load_ind.__str__(),
+        return hardware_inspector.CPUStats(cpu1MinLoad=cpu_1_min_load_ind.__str__(), cpu5MinLoad=cpu_5_min_load_ind.__str__(),
                         cpu15MinLoad=cpu_15_min_load_ind.__str__())
 
     def inspect_ram(self, host):
@@ -159,7 +113,7 @@ class SNMPInspector(Inspector):
         #get used Ram
         ram_used = self._get_value_from_oid(self._ram_used_oid, host)
 
-        return RAMStats(total=ram_total, used=ram_used)
+        return hardware_inspector.RAMStats(total=ram_total, used=ram_used)
 
     def inspect_disks(self, host):
         disk_indexes = self._walk_oid(self._disk_index_oid, host)
@@ -168,10 +122,10 @@ class SNMPInspector(Inspector):
             disk_path = self._get_value_from_oid(self._disk_path_oid + "." + disk_index, host)
             disk_size = self._get_value_from_oid(self._disk_size_oid + "." + disk_index, host)
             disk_used = self._get_value_from_oid(self._disk_used_oid + "." + disk_index, host)
-            disk_stats.append(DiskStats(path=disk_path.__str__(), size=disk_size, used=disk_used.__str__()))
+            disk_stats.append(hardware_inspector.DiskStats(path=disk_path.__str__(), size=disk_size, used=disk_used.__str__()))
         return disk_stats
 
-    def inspect_netInt(self, host):
+    def inspect_network(self, host):
         net_int_indexes = self._walk_oid(self._net_int_index_oid, host)
         net_int_stats = []
         for net_int_index in net_int_indexes:
@@ -180,7 +134,7 @@ class SNMPInspector(Inspector):
             net_int_received = self._get_value_from_oid(self._net_int_received_oid + "." + net_int_index, host)
             net_int_transmitted = self._get_value_from_oid(self._net_int_transmitted_oid + "." + net_int_index, host)
             net_int_error = self._get_value_from_oid(self._net_int_error_oid + "." + net_int_index, host)
-            net_int_stats.append(NetIntStats(name=net_int_name.__str__(), bandwidth=net_int_bandwidth.__str__(),
+            net_int_stats.append(hardware_inspector.NetIntStats(name=net_int_name.__str__(), bandwidth=net_int_bandwidth.__str__(),
                                  received=net_int_received.__str__(), transmitted=net_int_transmitted.__str__(),
                                 error=net_int_error.__str__()))
         return net_int_stats

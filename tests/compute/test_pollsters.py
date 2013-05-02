@@ -160,12 +160,12 @@ class TestCPUPollster(TestPollsterBase):
 
     @mock.patch('ceilometer.pipeline.setup_pipeline', mock.MagicMock())
     def test_get_counters(self):
-        self.inspector.inspect_cpus(self.instance.name).AndReturn(
+        self.inspector.inspect_cpu(self.instance.name).AndReturn(
             virt_inspector.CPUStats(time=1 * (10 ** 6), number=2))
-        self.inspector.inspect_cpus(self.instance.name).AndReturn(
+        self.inspector.inspect_cpu(self.instance.name).AndReturn(
             virt_inspector.CPUStats(time=3 * (10 ** 6), number=2))
         # cpu_time resets on instance restart
-        self.inspector.inspect_cpus(self.instance.name).AndReturn(
+        self.inspector.inspect_cpu(self.instance.name).AndReturn(
             virt_inspector.CPUStats(time=2 * (10 ** 6), number=2))
         self.mox.ReplayAll()
 

@@ -168,7 +168,7 @@ class CPUPollster(plugin.ComputePollster):
         self.LOG.info('checking instance %s', instance.id)
         instance_name = _instance_name(instance)
         try:
-            cpu_info = manager.inspector.inspect_cpus(instance_name)
+            cpu_info = manager.inspector.inspect_cpu(instance_name)
             self.LOG.info("CPUTIME USAGE: %s %d",
                           instance.__dict__, cpu_info.time)
             cpu_util = self.get_cpu_util(instance, cpu_info)

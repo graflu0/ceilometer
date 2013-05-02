@@ -25,9 +25,13 @@ class InspectorManager(object):
         #TODO add more inspectors
         self._snmp_inspector = self._get_inspector(cfg.CONF.snmp_inspector, global_conf)
 
-    def inspect_cpus(self, host):
+    def inspect_cpu(self, host):
         #TODO use config to check which inspector to take to check this host
-        return self._snmp_inspector.inspect_cpus(host)
+        return self._snmp_inspector.inspect_cpu(host)
+
+    def inspect_nics(self, host):
+        #TODO use config to check which inspector to take to check this host
+        return self._snmp_inspector.inspect_network(host)
 
     def _get_inspector(self, inspector_type, global_conf):
         try:
