@@ -63,7 +63,6 @@ class PollingTask(agent.PollingTask):
                                 self.manager,
                                 host)))
 
-                        #print(host)
                     except Exception as err:
                         LOG.warning('Continue after error from %s: %s',
                             pollster.name, err)

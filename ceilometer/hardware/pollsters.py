@@ -87,10 +87,6 @@ class CPUPollster(plugin.HardwarePollster):
             self.LOG.info("CPU UTILIZATION %% last minute: %s %0.2f",
                 host.__dict__, cpu_util_15_min)
 
-#            yield cpu_util_1_min
-#            yield cpu_util_5_min
-#            yield cpu_util_15_min
-
             yield make_counter_from_host(host,
                 name='cpu_util_1_min',
                 type=counter.TYPE_GAUGE,
