@@ -70,7 +70,7 @@ class Inspector(object):
         """
         raise NotImplementedError()
 
-    def inspect_disks(self, host):
+    def inspect_diskspace(self, host):
         """
         Inspect the disk statistics for a host.
 

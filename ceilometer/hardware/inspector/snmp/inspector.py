@@ -117,7 +117,7 @@ class SNMPInspector(hardware_inspector.Inspector):
 
         return hardware_inspector.MemoryStats(total=total, used=used)
 
-    def inspect_disks(self, host):
+    def inspect_diskspace(self, host):
         disk_indexes = self._walk_oid(self._disk_index_oid, host)
 
         for disk_index in disk_indexes:
