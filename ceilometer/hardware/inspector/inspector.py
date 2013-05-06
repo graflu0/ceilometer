@@ -20,15 +20,19 @@ CPUStats = collections.namedtuple('CPUStats', ['cpu1MinLoad', 'cpu5MinLoad', 'cp
 #
 RAMStats = collections.namedtuple('RAMStats', ['total', 'used'])
 
+# Named tuple representing disks.
+#
+# device: the device name for the disk
+#
+Disk = collections.namedtuple('Disk', ['device', 'path'])
 
 # Named tuple representing disk statistics.
 #
-# description: storage description
 # size: storage size (kBytes)
 # used: storage used
 #
 DiskStats = collections.namedtuple('DiskStats',
-    ['path', 'size', 'used'])
+    ['size', 'used'])
 
 
 # Named tuple representing an interface.
@@ -71,7 +75,7 @@ class Inspector(object):
         Inspect the disk statistics for a host.
 
         :param : the target host
-        :return: collection with DiskStats ['path', 'size', 'used']
+        :return: for each disk , the size and used space
         """
         raise NotImplementedError()
 

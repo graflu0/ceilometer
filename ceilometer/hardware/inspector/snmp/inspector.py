@@ -46,6 +46,7 @@ class SNMPInspector(hardware_inspector.Inspector):
         #Disk OIDs
         self._disk_index_oid = "1.3.6.1.4.1.2021.9.1.1"
         self._disk_path_oid = "1.3.6.1.4.1.2021.9.1.2"
+        self._disk_device_oid = "1.3.6.1.4.1.2021.9.1.3"
         self._disk_size_oid = "1.3.6.1.4.1.2021.9.1.6"
         self._disk_used_oid = "1.3.6.1.4.1.2021.9.1.8"
         #Network Interface OIDs
@@ -118,14 +119,18 @@ class SNMPInspector(hardware_inspector.Inspector):
 
     def inspect_disks(self, host):
         disk_indexes = self._walk_oid(self._disk_index_oid, host)
-        disk_stats = []
+
         for disk_index in disk_indexes:
-            disk_path = self._get_value_from_oid(self._disk_path_oid + "." + disk_index, host)
-            disk_size = self._get_value_from_oid(self._disk_size_oid + "." + disk_index, host)
-            disk_used = self._get_value_from_oid(self._disk_used_oid + "." + disk_index, host)
-            disk_stats.append(hardware_inspector.DiskStats(path=disk_path.__str__(), size=disk_size,
-                                                           used=disk_used.__str__()))
-        return disk_stats
+            path = self._get_value_from_oid(self._disk_path_oid + "." + disk_index, host)
+            device = self._get_value_from_oid(self._disk_device_oid + "." + disk_index, host)
+            size = self._get_value_from_oid(self._disk_size_oid + "." + disk_index, host)
+            used = self._get_value_from_oid(self._disk_used_oid + "." + disk_index, host)
+
+            disk = hardware_inspector.Disk(device=device, path=path)
+            stats = hardware_inspector.DiskStats(size=size,used=used)
+
+            yield (disk, stats)
+
 
     def inspect_network(self, host):
         net_int_indexes = self._walk_oid(self._interface_index_oid, host)
