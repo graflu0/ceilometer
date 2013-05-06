@@ -157,11 +157,10 @@ class NetPollster(plugin.HardwarePollster):
 
         self.LOG.info('checking host %s', host.ip_address)
         try:
+            print manager.inspector_manager.inspect_nics(host)
             for nic, info in manager.inspector_manager.inspect_nics(host):
                 self.LOG.info(self.NET_USAGE_MESSAGE, host.ip_address, host.id,
                     nic.name, info.rx_bytes, info.tx_bytes)
-
-                #TODO: Units verbessern
                 yield self.make_vnic_counter(host,
                     name='network.bandwidth.bytes',
                     type=counter.TYPE_CUMULATIVE,
@@ -169,28 +168,28 @@ class NetPollster(plugin.HardwarePollster):
                     volume=info.rx_packets,
                     vnic_data=nic,
                 )
-
-                yield self.make_vnic_counter(host,
-                    name='network.incoming.bytes',
-                    type=counter.TYPE_CUMULATIVE,
-                    unit='B',
-                    volume=info.rx_bytes,
-                    vnic_data=nic,
-                )
-                yield self.make_vnic_counter(host,
-                    name='network.outgoing.bytes',
-                    type=counter.TYPE_CUMULATIVE,
-                    unit='B',
-                    volume=info.tx_bytes,
-                    vnic_data=nic,
-                )
-                yield self.make_vnic_counter(host,
-                    name='network.outgoing.packets',
-                    type=counter.TYPE_CUMULATIVE,
-                    unit='packet',
-                    volume=info.tx_packets,
-                    vnic_data=nic,
-                )
+#
+#                yield self.make_vnic_counter(host,
+#                    name='network.incoming.bytes',
+#                    type=counter.TYPE_CUMULATIVE,
+#                    unit='B',
+#                    volume=info.rx_bytes,
+#                    vnic_data=nic,
+#                )
+#                yield self.make_vnic_counter(host,
+#                    name='network.outgoing.bytes',
+#                    type=counter.TYPE_CUMULATIVE,
+#                    unit='B',
+#                    volume=info.tx_bytes,
+#                    vnic_data=nic,
+#                )
+#                yield self.make_vnic_counter(host,
+#                    name='network.outgoing.packets',
+#                    type=counter.TYPE_CUMULATIVE,
+#                    unit='packet',
+#                    volume=info.tx_packets,
+#                    vnic_data=nic,
+#                )
         except Exception as err:
             self.LOG.warning('Ignoring instance %s with id %s: %s',
                 host.ip_address, host.id, err)

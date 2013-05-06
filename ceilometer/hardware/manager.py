@@ -58,12 +58,12 @@ class PollingTask(agent.PollingTask):
                         if not pollster.name in host.disabled_pollsters:
                             #TODO get data from hosts
                             print host.ip_address +" " +pollster.name
-#                            print list(pollster.obj.get_counters(
-#                                self.manager,
-#                                host))
-                            publisher(list(pollster.obj.get_counters(
+                            print list(pollster.obj.get_counters(
                                 self.manager,
-                                host)))
+                                host))
+#                            publisher(list(pollster.obj.get_counters(
+#                                self.manager,
+#                                host)))
 #                            print host.ip_address +" " +pollster.name
 
                     except Exception as err:
