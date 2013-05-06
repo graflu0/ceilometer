@@ -31,16 +31,24 @@ DiskStats = collections.namedtuple('DiskStats',
     ['path', 'size', 'used'])
 
 
+# Named tuple representing an interface.
+#
+# name: the name of the interface
+# mac: the MAC address
+#
+Interface = collections.namedtuple('Interface', ['name', 'mac'])
+
+
 # Named tuple representing network interface statistics.
 #
 # name: name of the network interface
-# bandwidth: current bandwidth (bit/s)
+# bandwidth: current bandwidth (bytes/s)
 # received: total number of octets received
 # transmitted: total number of octets transmitted
 # error: number of outbound packets that could not be transmitted because of errors
 #
-NetIntStats = collections.namedtuple('NetIntStats',
-    ['name', 'bandwidth', 'used', 'received', 'transmitted', 'error'])
+InterfaceStats = collections.namedtuple('InterfaceStats',
+    ['bandwidth', 'rx_bytes', 'tx_bytes', 'error'])
 
 class InspectorException(Exception):
     def __init__(self, message=None):
@@ -81,7 +89,7 @@ class Inspector(object):
         Inspect the network interfaces for a host.
 
         :param : the target host
-        :return: collection with NetIntStats ['name', 'bandwidth', 'used', 'in', 'out', 'error']
+        :return: for each interface, the number of bytes received and transmitted and errors
         """
         raise NotImplementedError()
         
