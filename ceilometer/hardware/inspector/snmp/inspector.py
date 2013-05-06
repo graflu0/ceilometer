@@ -40,9 +40,9 @@ class SNMPInspector(hardware_inspector.Inspector):
         self._cpu_1_min_load_oid = "1.3.6.1.4.1.2021.10.1.3.1"
         self._cpu_5_min_load_oid = "1.3.6.1.4.1.2021.10.1.3.2"
         self._cpu_15_min_load_oid = "1.3.6.1.4.1.2021.10.1.3.3"
-        #RAM OIDs
-        self._ram_total_oid = "1.3.6.1.4.1.2021.4.5.0"
-        self._ram_used_oid = "1.3.6.1.4.1.2021.4.6.0"
+        #Memory OIDs
+        self._memory_total_oid = "1.3.6.1.4.1.2021.4.5.0"
+        self._memory_used_oid = "1.3.6.1.4.1.2021.4.6.0"
         #Disk OIDs
         self._disk_index_oid = "1.3.6.1.4.1.2021.9.1.1"
         self._disk_path_oid = "1.3.6.1.4.1.2021.9.1.2"
@@ -108,14 +108,14 @@ class SNMPInspector(hardware_inspector.Inspector):
         return hardware_inspector.CPUStats(cpu1MinLoad=cpu_1_min_load_ind.__str__(), cpu5MinLoad=cpu_5_min_load_ind.__str__(),
                         cpu15MinLoad=cpu_15_min_load_ind.__str__())
 
-    def inspect_ram(self, host):
-        #get total Ram
-        ram_total = self._get_value_from_oid(self._ram_total_oid, host)
+    def inspect_memory(self, host):
+        #get total memory
+        total = self._get_value_from_oid(self._memory_total_oid, host)
 
-        #get used Ram
-        ram_used = self._get_value_from_oid(self._ram_used_oid, host)
+        #get used memory
+        used = self._get_value_from_oid(self._memory_used_oid, host)
 
-        return hardware_inspector.RAMStats(total=ram_total, used=ram_used)
+        return hardware_inspector.MemoryStats(total=total, used=used)
 
     def inspect_disks(self, host):
         disk_indexes = self._walk_oid(self._disk_index_oid, host)

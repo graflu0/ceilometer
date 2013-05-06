@@ -14,11 +14,11 @@ CPUStats = collections.namedtuple('CPUStats', ['cpu1MinLoad', 'cpu5MinLoad', 'cp
 
 # Named tuple representing RAM statistics.
 #
-# total: Total RAM
-# used: Used RAM
-# free: Free RAM
+# total: Total Memory
+# used: Used Memory
+# free: Free Memory
 #
-RAMStats = collections.namedtuple('RAMStats', ['total', 'used'])
+MemoryStats = collections.namedtuple('MemoryStats', ['total', 'used'])
 
 # Named tuple representing disks.
 #
@@ -79,12 +79,12 @@ class Inspector(object):
         """
         raise NotImplementedError()
 
-    def inspect_ram(self, host):
+    def inspect_memory(self, host):
         """
         Inspect the ram statistics for a host.
 
         :param : the target host
-        :return: total RAM, used RAM
+        :return: total memory, used memory
         """
         raise NotImplementedError()
 
