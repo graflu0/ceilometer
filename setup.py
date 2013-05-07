@@ -118,7 +118,7 @@ setuptools.setup(
     [ceilometer.poll.hardware]
     cpu = ceilometer.hardware.pollsters:CPUPollster
     network = ceilometer.hardware.pollsters:NetPollster
-    diskspace = ceilometer.hardware.pollsters:CPUPollster
+    diskspace = ceilometer.hardware.pollsters:DiskSpacePollster
     memory = ceilometer.hardware.pollsters:CPUPollster
 
     [ceilometer.poll.central]

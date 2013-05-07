@@ -29,8 +29,14 @@ from ceilometer.openstack.common import timeutils
 
 LOG = log.getLogger(__name__)
 
-def make_counter_from_host(host, name, type, unit, volume):
+def make_counter_from_host(host, name, type, unit, volume, res_metadata=None):
     #TODO: Replace user_id and Project_id with real ids
+    resource_metadata = dict()
+    if(res_metadata is not None):
+        metadata = copy.copy(res_metadata)
+        resource_metadata = dict(zip(metadata._fields, metadata))
+    resource_metadata.update(hardware_host.get_metadata_from_object(host))
+
     return counter.Counter(
         name=name,
         type=type,
@@ -40,7 +46,7 @@ def make_counter_from_host(host, name, type, unit, volume):
         project_id='hardware_project_tenant_id',
         resource_id=host.id,
         timestamp=timeutils.isotime(),
-        resource_metadata=hardware_host.get_metadata_from_object(host),
+        resource_metadata=resource_metadata,
     )
 
 class CPUPollster(plugin.HardwarePollster):
@@ -109,8 +115,8 @@ class CPUPollster(plugin.HardwarePollster):
             )
 
         except Exception as err:
-            self.LOG.error('could not get CPU time for %s: %s',
-                host, err)
+            self.LOG.error('could not get CPU time for %s with id %s: %s',
+                host.ip_address, host.id, err)
             self.LOG.exception(err)
 
 class NetPollster(plugin.HardwarePollster):
@@ -119,24 +125,6 @@ class NetPollster(plugin.HardwarePollster):
 
     NET_USAGE_MESSAGE = ' '.join(["NETWORK USAGE:", "%s with id %s and interface %s:", "read-bytes=%d",
                                   "write-bytes=%d"])
-
-    @staticmethod
-    def make_nic_counter(host, name, type, unit, volume, nic_data):
-        metadata = copy.copy(nic_data)
-        resource_metadata = dict(zip(metadata._fields, metadata))
-
-        #TODO: Replace user_id and Project_id with real ids
-        return counter.Counter(
-            name=name,
-            type=type,
-            unit=unit,
-            volume=volume,
-            user_id='hardware_stuff',
-            project_id='hardware_project_tenant_id',
-            resource_id=host.id,
-            timestamp=timeutils.isotime(),
-            resource_metadata=resource_metadata
-        )
 
     @staticmethod
     def get_counter_names():
@@ -152,36 +140,84 @@ class NetPollster(plugin.HardwarePollster):
             for nic, info in manager.inspector_manager.inspect_nics(host):
                 self.LOG.info(self.NET_USAGE_MESSAGE, host.ip_address, host.id,
                     nic.name, info.rx_bytes, info.tx_bytes)
-                yield self.make_nic_counter(host,
+                yield make_counter_from_host(host,
                     name='network.bandwidth.bytes',
                     type=counter.TYPE_CUMULATIVE,
                     unit='B',
                     volume=info.bandwidth,
-                    nic_data=nic,
+                    res_metadata=nic,
                 )
 
-                yield self.make_nic_counter(host,
+                yield make_counter_from_host(host,
                     name='network.incoming.bytes',
                     type=counter.TYPE_CUMULATIVE,
                     unit='B',
                     volume=info.rx_bytes,
-                    nic_data=nic,
+                    res_metadata=nic,
                 )
-                yield self.make_nic_counter(host,
+                yield make_counter_from_host(host,
                     name='network.outgoing.bytes',
                     type=counter.TYPE_CUMULATIVE,
                     unit='B',
                     volume=info.tx_bytes,
-                    nic_data=nic,
+                    res_metadata=nic,
                 )
-                yield self.make_nic_counter(host,
+                yield make_counter_from_host(host,
                     name='network.outgoing.errors',
                     type=counter.TYPE_CUMULATIVE,
                     unit='packet',
                     volume=info.error,
-                    nic_data=nic,
+                    res_metadata=nic,
                 )
         except Exception as err:
             self.LOG.warning('Ignoring instance %s with id %s: %s',
                 host.ip_address, host.id, err)
             self.LOG.exception(err)
+
+class DiskSpacePollster(plugin.HardwarePollster):
+
+    LOG = log.getLogger(__name__ + '.diskspace')
+
+    DISKSPACE_USAGE_MESSAGE = ' '.join(["DISKSPACE USAGE:",
+                                        "%s with id %s:",
+                                        "existing space=%d",
+                                        "used space=%d",
+                                        " on device %s",
+                                        " and path %s"
+                                        ])
+
+    @staticmethod
+    def get_counter_names():
+        return ['disk.size.existing',
+                'disk.size.used']
+
+    def get_counters(self, manager, host):
+
+        try:
+            for disk, info in manager.inspector_manager.inspect_diskspace(host):
+                self.LOG.info(self.DISKSPACE_USAGE_MESSAGE,
+                    host.ip_address, host.id, info.size,
+                    info.used, disk.device,
+                    disk.path)
+
+            yield make_counter_from_host(host,
+                name='disk.size.existing',
+                type=counter.TYPE_CUMULATIVE,
+                unit='B',
+                volume=info.size,
+                res_metadata=disk
+            )
+
+            yield make_counter_from_host(host,
+                name='disk.size.used',
+                type=counter.TYPE_CUMULATIVE,
+                unit='B',
+                volume=info.used,
+                res_metadata=disk
+            )
+
+        except Exception as err:
+            self.LOG.warning('Ignoring instance %s with id %s: %s',
+                host.ip_address, host.id, err)
+            self.LOG.exception(err)
+
