@@ -55,7 +55,7 @@ class SNMPInspector(hardware_inspector.Inspector):
         self._interface_name_oid = "1.3.6.1.2.1.2.2.1.2"
         self._interface_bandwidth_oid = "1.3.6.1.2.1.2.2.1.5"
         self._interface_mac_oid = "1.3.6.1.2.1.2.2.1.6"
-        self._interface_ip_oid = "1.3.6.1.2.1.4.20.1.1"
+        self._interface_ip_oid = "1.3.6.1.2.1.4.20.1.2"
         self._interface_received_oid = "1.3.6.1.2.1.2.2.1.10"
         self._interface_transmitted_oid = "1.3.6.1.2.1.2.2.1.16"
         self._interface_error_oid = "1.3.6.1.2.1.2.2.1.20"
@@ -141,18 +141,19 @@ class SNMPInspector(hardware_inspector.Inspector):
         for interface in net_interfaces:
             for object_name, value in interface:
                 name = self._get_value_from_oid(self._interface_name_oid + "." + str(value), host)
-                mac = self._get_value_from_oid(self._interface_mac_oid + "." + str(value), host)
-                ip = self._get_value_from_oid(self._interface_ip_oid + "." + str(value), host)
-                bandwidth = self._get_value_from_oid(self._interface_bandwidth_oid + "." + str(value), host)/8 # bits/s to byte/s
-                rx_bytes = self._get_value_from_oid(self._interface_received_oid + "." + str(value), host)
-                tx_bytes = self._get_value_from_oid(self._interface_transmitted_oid + "." + str(value), host)
-                error = self._get_value_from_oid(self._interface_error_oid + "." + str(value), host)
+                if name != "lo":
+                    mac = self._get_value_from_oid(self._interface_mac_oid + "." + str(value), host)
+                    ip = self._get_ip_for_interface(host, value)
+                    bandwidth = self._get_value_from_oid(self._interface_bandwidth_oid + "." + str(value), host)/8 # bits/s to byte/s
+                    rx_bytes = self._get_value_from_oid(self._interface_received_oid + "." + str(value), host)
+                    tx_bytes = self._get_value_from_oid(self._interface_transmitted_oid + "." + str(value), host)
+                    error = self._get_value_from_oid(self._interface_error_oid + "." + str(value), host)
 
-                interface = hardware_inspector.Interface(name=name.__str__(),mac=mac.__str__(), ip=ip.__str__())
-                stats = hardware_inspector.InterfaceStats(bandwidth=bandwidth.__str__(),rx_bytes=rx_bytes.__str__(),
-                                                          tx_bytes=tx_bytes.__str__(),error=error.__str__())
+                    interface = hardware_inspector.Interface(name=str(name),mac=':'.join(['%x' % ord(x) for x in mac]), ip=str(ip))
+                    stats = hardware_inspector.InterfaceStats(bandwidth=str(bandwidth),rx_bytes=str(rx_bytes),
+                                                              tx_bytes=str(tx_bytes),error=str(error))
 
-                yield (interface, stats)
+                    yield (interface, stats)
 
     def set_configuration(self, config):
         self._config = config
@@ -174,3 +175,11 @@ class SNMPInspector(hardware_inspector.Inspector):
         else:
             security_name = self._security_name
         return security_name
+
+    def _get_ip_for_interface(self, host, interface_id):
+        ip_addresses = self._walk_oid(self._interface_ip_oid, host)
+        print ip_addresses
+        for ip in ip_addresses:
+            for object_name, value in ip:
+                if value == interface_id:
+                    return object_name.__str__().replace(self._interface_ip_oid+".","")
