@@ -149,7 +149,7 @@ class SNMPInspector(hardware_inspector.Inspector):
                     tx_bytes = self._get_value_from_oid(self._interface_transmitted_oid + "." + str(value), host)
                     error = self._get_value_from_oid(self._interface_error_oid + "." + str(value), host)
 
-                    interface = hardware_inspector.Interface(name=str(name),mac=':'.join(['%x' % ord(x) for x in mac]), ip=str(ip))
+                    interface = hardware_inspector.Interface(name=str(name),mac=mac.prettyPrint().replace('0x', ''), ip=str(ip))
                     stats = hardware_inspector.InterfaceStats(bandwidth=str(bandwidth),rx_bytes=str(rx_bytes),
                                                               tx_bytes=str(tx_bytes),error=str(error))
 
