@@ -109,7 +109,7 @@ class SNMPInspector(hardware_inspector.Inspector):
         return hardware_inspector.CPUStats(cpu1MinLoad=str(cpu_1_min_load_ind), cpu5MinLoad=str(cpu_5_min_load_ind),
                         cpu15MinLoad=str(cpu_15_min_load_ind))
 
-    def inspect_memory(self, host):
+    def inspect_memoryspace(self, host):
         #get total memory
         total = self._get_value_from_oid(self._memory_total_oid, host)
 

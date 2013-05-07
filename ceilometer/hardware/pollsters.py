@@ -28,6 +28,7 @@ from ceilometer.openstack.common import log
 from ceilometer.openstack.common import timeutils
 
 LOG = log.getLogger(__name__)
+#TODO: überprüfen ob Disk & Memory Angaben korrekt vom SNMP-Inspector zurückgegeben werden
 
 def make_counter_from_host(host, name, type, unit, volume, res_metadata=None):
     #TODO: Replace user_id and Project_id with real ids
@@ -52,25 +53,6 @@ def make_counter_from_host(host, name, type, unit, volume, res_metadata=None):
 class CPUPollster(plugin.HardwarePollster):
 
     LOG = log.getLogger(__name__ + '.cpu')
-
-    utilization_map = {}
-
-    def get_cpu_util(self, host, cpu_info):
-        prev_times = self.utilization_map.get(host.id)
-        self.utilization_map[host.id] = (cpu_info.time,
-                                             datetime.datetime.now())
-        cpu_util = 0.0
-        if prev_times:
-            prev_cpu = prev_times[0]
-            prev_timestamp = prev_times[1]
-            delta = self.utilization_map[host.id][1] - prev_timestamp
-            elapsed = (delta.seconds * (10 ** 6) + delta.microseconds) * 1000
-            cores_fraction = 1.0 / cpu_info.number
-            # account for cpu_time being reset when the host is restarted
-            time_used = (cpu_info.time - prev_cpu
-                         if prev_cpu <= cpu_info.time else cpu_info.time)
-            cpu_util = 100 * cores_fraction * time_used / elapsed
-        return cpu_util
 
     @staticmethod
     def get_counter_names():
@@ -170,7 +152,7 @@ class NetPollster(plugin.HardwarePollster):
                     res_metadata=nic,
                 )
         except Exception as err:
-            self.LOG.warning('Ignoring instance %s with id %s: %s',
+            self.LOG.warning('could not get network stats for %s with id %s: %s',
                 host.ip_address, host.id, err)
             self.LOG.exception(err)
 
@@ -180,7 +162,7 @@ class DiskSpacePollster(plugin.HardwarePollster):
 
     DISKSPACE_USAGE_MESSAGE = ' '.join(["DISKSPACE USAGE:",
                                         "%s with id %s:",
-                                        "existing space=%d",
+                                        "total space=%d",
                                         "used space=%d",
                                         " on device %s",
                                         " and path %s"
@@ -188,7 +170,7 @@ class DiskSpacePollster(plugin.HardwarePollster):
 
     @staticmethod
     def get_counter_names():
-        return ['disk.size.existing',
+        return ['disk.size.total',
                 'disk.size.used']
 
     def get_counters(self, manager, host):
@@ -201,7 +183,7 @@ class DiskSpacePollster(plugin.HardwarePollster):
                     disk.path)
 
             yield make_counter_from_host(host,
-                name='disk.size.existing',
+                name='disk.size.total',
                 type=counter.TYPE_CUMULATIVE,
                 unit='B',
                 volume=info.size,
@@ -217,7 +199,43 @@ class DiskSpacePollster(plugin.HardwarePollster):
             )
 
         except Exception as err:
-            self.LOG.warning('Ignoring instance %s with id %s: %s',
+            self.LOG.warning('could not get disk usage for %s with id %s: %s',
                 host.ip_address, host.id, err)
             self.LOG.exception(err)
+
+class MemorySpacePollster(plugin.HardwarePollster):
+    LOG = log.getLogger(__name__ + '.memoryspace')
+
+    MEMORYSPACE_USAGE_MESSAGE = ' '.join(["MEMORYSPACE USAGE:",
+                                        "%s with id %s:",
+                                        "total memory=%d",
+                                        "used memory=%d"
+                                        ])
+
+    @staticmethod
+    def get_counter_names():
+        return ['memory.size.total',
+                'memory.size.used']
+
+    def get_counters(self, manager, host):
+
+        try:
+            memoryinfo = manager.inspector_manager.inspect_memoryspace(host)
+            yield make_counter_from_host(host,
+                name='memory.size.total',
+                type=counter.TYPE_CUMULATIVE,
+                unit='B',
+                volume=memoryinfo.total
+            )
+            yield make_counter_from_host(host,
+                name='memory.size.used',
+                type=counter.TYPE_CUMULATIVE,
+                unit='B',
+                volume=memoryinfo.used
+            )
+        except Exception as err:
+            self.LOG.warning('could not get memory usage for %s with id %s: %s',
+                host.ip_address, host.id, err)
+            self.LOG.exception(err)
+
 

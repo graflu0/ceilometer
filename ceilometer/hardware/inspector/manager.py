@@ -57,9 +57,9 @@ class InspectorManager(object):
         #TODO use config to check which inspector to take to check this host
         return self._snmp_inspector.inspect_diskspace(host)
 
-    def inspect_memory(self, host):
+    def inspect_memoryspace(self, host):
         #TODO use config to check which inspector to take to check this host
-        return self._snmp_inspector.inspect_memory(host)
+        return self._snmp_inspector.inspect_memoryspace(host)
 
     def _get_inspector(self, inspector_type, global_conf):
         try:

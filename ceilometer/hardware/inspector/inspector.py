@@ -96,7 +96,7 @@ class Inspector(object):
         """
         raise NotImplementedError()
 
-    def inspect_memory(self, host):
+    def inspect_memoryspace(self, host):
         """
         Inspect the ram statistics for a host.
 

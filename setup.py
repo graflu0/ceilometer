@@ -119,7 +119,7 @@ setuptools.setup(
     cpu = ceilometer.hardware.pollsters:CPUPollster
     network = ceilometer.hardware.pollsters:NetPollster
     diskspace = ceilometer.hardware.pollsters:DiskSpacePollster
-    memory = ceilometer.hardware.pollsters:CPUPollster
+    memoryspace = ceilometer.hardware.pollsters:MemorySpacePollster
 
     [ceilometer.poll.central]
     network_floatingip = ceilometer.network.floatingip:FloatingIPPollster
