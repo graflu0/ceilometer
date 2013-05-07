@@ -140,10 +140,10 @@ class SNMPInspector(hardware_inspector.Inspector):
 
         for interface in net_interfaces:
             for object_name, value in interface:
-                name = self._get_value_from_oid(self._interface_name_oid + "." + str(value), host)
-                if name != "lo":
+                ip = self._get_ip_for_interface(host, value)
+                if not ip.startswith("127."):
+                    name = self._get_value_from_oid(self._interface_name_oid + "." + str(value), host)
                     mac = self._get_value_from_oid(self._interface_mac_oid + "." + str(value), host)
-                    ip = self._get_ip_for_interface(host, value)
                     bandwidth = self._get_value_from_oid(self._interface_bandwidth_oid + "." + str(value), host)/8 # bits/s to byte/s
                     rx_bytes = self._get_value_from_oid(self._interface_received_oid + "." + str(value), host)
                     tx_bytes = self._get_value_from_oid(self._interface_transmitted_oid + "." + str(value), host)
@@ -178,7 +178,6 @@ class SNMPInspector(hardware_inspector.Inspector):
 
     def _get_ip_for_interface(self, host, interface_id):
         ip_addresses = self._walk_oid(self._interface_ip_oid, host)
-        print ip_addresses
         for ip in ip_addresses:
             for object_name, value in ip:
                 if value == interface_id:
