@@ -44,9 +44,11 @@ def get_metadata_from_object(host):
     """Return a metadata dictionary for the instance.
     """
     metadata = {
-        'display_name': 'dummy_name'
+        'host_ip_address' : host.ip_address,
+        'host_name' : host.name,
+        'host_mac_address' : host.id
         }
-    #print metadata
+#    print metadata
 #    for name in INSTANCE_PROPERTIES:
 #        metadata[name] = getattr(host, name, u'')
     return metadata
@@ -58,6 +60,7 @@ class HardwareHost(object):
         self._ip_address = ip_address
         #TODO: improve getting mac & name
         self._mac_address="000000ffffff"
+        self._name="rechner@zhaw.ch"
 #        try:
 #            self._mac_address = self._get_mac_of_ip(ip_address)
 #        except InstanceNotReachableException as exception:

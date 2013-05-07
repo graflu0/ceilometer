@@ -30,13 +30,14 @@ from ceilometer.openstack.common import timeutils
 LOG = log.getLogger(__name__)
 
 def make_counter_from_host(host, name, type, unit, volume):
+    #TODO: Replace user_id and Project_id with real ids
     return counter.Counter(
         name=name,
         type=type,
         unit=unit,
         volume=volume,
         user_id='hardware_stuff',
-        project_id='hardware_project',
+        project_id='hardware_project_tenant_id',
         resource_id=host.id,
         timestamp=timeutils.isotime(),
         resource_metadata=hardware_host.get_metadata_from_object(host),
@@ -70,7 +71,6 @@ class CPUPollster(plugin.HardwarePollster):
         return ['cpu_util_1_min', 'cpu_util_5_min', 'cpu_util_15_min']
 
     def get_counters(self, manager, host):
-        #TODO set host Attributes
         self.LOG.info('checking host %s with id %s', host.ip_address, host.id)
         try:
             cpu_info = manager.inspector_manager.inspect_cpu(host)
@@ -120,28 +120,20 @@ class NetPollster(plugin.HardwarePollster):
     NET_USAGE_MESSAGE = ' '.join(["NETWORK USAGE:", "%s with id %s and interface %s:", "read-bytes=%d",
                                   "write-bytes=%d"])
 
-    #name = iface name
-    # 'bandwidth' = aktuell bit/s
-    # 'in' = byte seit letztes mal down
-    # 'out' = byte seit letztes mal down
-    # 'error' = number of outbound packet errors
-
     @staticmethod
-    def make_vnic_counter(instance, name, type, unit, volume, vnic_data):
-        metadata = copy.copy(vnic_data)
+    def make_nic_counter(host, name, type, unit, volume, nic_data):
+        metadata = copy.copy(nic_data)
         resource_metadata = dict(zip(metadata._fields, metadata))
-        resource_metadata['instance_id'] = instance.id
-        resource_metadata['instance_type'] =\
-        instance.flavor['id'] if instance.flavor else None
 
+        #TODO: Replace user_id and Project_id with real ids
         return counter.Counter(
             name=name,
             type=type,
             unit=unit,
             volume=volume,
-            user_id=instance.user_id,
-            project_id=instance.tenant_id,
-            resource_id=vnic_data.fref,
+            user_id='hardware_stuff',
+            project_id='hardware_project_tenant_id',
+            resource_id=host.id,
             timestamp=timeutils.isotime(),
             resource_metadata=resource_metadata
         )
@@ -155,41 +147,40 @@ class NetPollster(plugin.HardwarePollster):
 
     def get_counters(self, manager, host):
 
-        self.LOG.info('checking host %s', host.ip_address)
+        self.LOG.info('checking host %s with id ', host.ip_address, host.id)
         try:
-            print manager.inspector_manager.inspect_nics(host)
             for nic, info in manager.inspector_manager.inspect_nics(host):
                 self.LOG.info(self.NET_USAGE_MESSAGE, host.ip_address, host.id,
                     nic.name, info.rx_bytes, info.tx_bytes)
-                yield self.make_vnic_counter(host,
+                yield self.make_nic_counter(host,
                     name='network.bandwidth.bytes',
                     type=counter.TYPE_CUMULATIVE,
-                    unit='b',
-                    volume=info.rx_packets,
-                    vnic_data=nic,
+                    unit='B',
+                    volume=info.bandwidth,
+                    nic_data=nic,
                 )
-#
-#                yield self.make_vnic_counter(host,
-#                    name='network.incoming.bytes',
-#                    type=counter.TYPE_CUMULATIVE,
-#                    unit='B',
-#                    volume=info.rx_bytes,
-#                    vnic_data=nic,
-#                )
-#                yield self.make_vnic_counter(host,
-#                    name='network.outgoing.bytes',
-#                    type=counter.TYPE_CUMULATIVE,
-#                    unit='B',
-#                    volume=info.tx_bytes,
-#                    vnic_data=nic,
-#                )
-#                yield self.make_vnic_counter(host,
-#                    name='network.outgoing.packets',
-#                    type=counter.TYPE_CUMULATIVE,
-#                    unit='packet',
-#                    volume=info.tx_packets,
-#                    vnic_data=nic,
-#                )
+
+                yield self.make_nic_counter(host,
+                    name='network.incoming.bytes',
+                    type=counter.TYPE_CUMULATIVE,
+                    unit='B',
+                    volume=info.rx_bytes,
+                    nic_data=nic,
+                )
+                yield self.make_nic_counter(host,
+                    name='network.outgoing.bytes',
+                    type=counter.TYPE_CUMULATIVE,
+                    unit='B',
+                    volume=info.tx_bytes,
+                    nic_data=nic,
+                )
+                yield self.make_nic_counter(host,
+                    name='network.outgoing.errors',
+                    type=counter.TYPE_CUMULATIVE,
+                    unit='packet',
+                    volume=info.error,
+                    nic_data=nic,
+                )
         except Exception as err:
             self.LOG.warning('Ignoring instance %s with id %s: %s',
                 host.ip_address, host.id, err)
