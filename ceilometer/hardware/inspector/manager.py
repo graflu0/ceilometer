@@ -53,6 +53,14 @@ class InspectorManager(object):
         #TODO use config to check which inspector to take to check this host
         return self._snmp_inspector.inspect_network(host)
 
+    def inspect_diskspace(self, host):
+        #TODO use config to check which inspector to take to check this host
+        return self._snmp_inspector.inspect_diskspace(host)
+
+    def inspect_memory(self, host):
+        #TODO use config to check which inspector to take to check this host
+        return self._snmp_inspector.inspect_memory(host)
+
     def _get_inspector(self, inspector_type, global_conf):
         try:
             namespace = 'ceilometer.hardware.inspectors'
