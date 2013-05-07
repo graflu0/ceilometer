@@ -57,7 +57,7 @@ DiskStats = collections.namedtuple('DiskStats',
 # name: the name of the interface
 # mac: the MAC address
 #
-Interface = collections.namedtuple('Interface', ['name', 'mac'])
+Interface = collections.namedtuple('Interface', ['name', 'mac', 'ip'])
 
 
 # Named tuple representing network interface statistics.

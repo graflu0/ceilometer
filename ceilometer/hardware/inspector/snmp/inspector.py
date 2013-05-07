@@ -55,6 +55,7 @@ class SNMPInspector(hardware_inspector.Inspector):
         self._interface_name_oid = "1.3.6.1.2.1.2.2.1.2"
         self._interface_bandwidth_oid = "1.3.6.1.2.1.2.2.1.5"
         self._interface_mac_oid = "1.3.6.1.2.1.2.2.1.6"
+        self._interface_ip_oid = "1.3.6.1.2.1.4.20.1.1"
         self._interface_received_oid = "1.3.6.1.2.1.2.2.1.10"
         self._interface_transmitted_oid = "1.3.6.1.2.1.2.2.1.16"
         self._interface_error_oid = "1.3.6.1.2.1.2.2.1.20"
@@ -78,11 +79,10 @@ class SNMPInspector(hardware_inspector.Inspector):
                     return val
 
     def _walk_oid(self, oid, host):
-        errorIndication, errorStatus, errorIndex, varBindTable = self._cmdGen.getCmd(
+        errorIndication, errorStatus, errorIndex, varBindTable = self._cmdGen.nextCmd(
             cmdgen.CommunityData(self._get_security_name(host)),
             cmdgen.UdpTransportTarget((host.ip_address, self._get_port(host))),
-            oid,
-            lexicographicMode=False
+            oid
         )
         if errorIndication:
             LOG.error(errorIndication)
@@ -119,36 +119,40 @@ class SNMPInspector(hardware_inspector.Inspector):
         return hardware_inspector.MemoryStats(total=total, used=used)
 
     def inspect_diskspace(self, host):
-        disk_indexes = self._walk_oid(self._disk_index_oid, host)
+        disks = self._walk_oid(self._disk_index_oid, host)
 
-        for disk_index in disk_indexes:
-            path = self._get_value_from_oid(self._disk_path_oid + "." + disk_index, host)
-            device = self._get_value_from_oid(self._disk_device_oid + "." + disk_index, host)
-            size = self._get_value_from_oid(self._disk_size_oid + "." + disk_index, host)
-            used = self._get_value_from_oid(self._disk_used_oid + "." + disk_index, host)
+        for disk in disks:
+            for object_name, value in disk:
 
-            disk = hardware_inspector.Disk(device=device, path=path)
-            stats = hardware_inspector.DiskStats(size=size,used=used)
+                path = self._get_value_from_oid(self._disk_path_oid + "." + str(value), host)
+                device = self._get_value_from_oid(self._disk_device_oid + "." + str(value), host)
+                size = self._get_value_from_oid(self._disk_size_oid + "." + str(value), host)
+                used = self._get_value_from_oid(self._disk_used_oid + "." + str(value), host)
 
-            yield (disk, stats)
+                disk = hardware_inspector.Disk(device=device, path=path)
+                stats = hardware_inspector.DiskStats(size=size,used=used)
+
+                yield (disk, stats)
 
 
     def inspect_network(self, host):
-        net_int_indexes = self._walk_oid(self._interface_index_oid, host)
+        net_interfaces = self._walk_oid(self._interface_index_oid, host)
 
-        for net_int_index in net_int_indexes:
-            name = self._get_value_from_oid(self._interface_name_oid + "." + net_int_index, host)
-            mac = self._get_value_from_oid(self._interface_mac_oid + "." + net_int_index, host)
-            bandwidth = self._get_value_from_oid(self._interface_bandwidth_oid + "." + net_int_index, host)/8 # bits/s to byte/s
-            rx_bytes = self._get_value_from_oid(self._interface_received_oid + "." + net_int_index, host)
-            tx_bytes = self._get_value_from_oid(self._interface_transmitted_oid + "." + net_int_index, host)
-            error = self._get_value_from_oid(self._interface_error_oid + "." + net_int_index, host)
+        for interface in net_interfaces:
+            for object_name, value in interface:
+                name = self._get_value_from_oid(self._interface_name_oid + "." + str(value), host)
+                mac = self._get_value_from_oid(self._interface_mac_oid + "." + str(value), host)
+                ip = self._get_value_from_oid(self._interface_ip_oid + "." + str(value), host)
+                bandwidth = self._get_value_from_oid(self._interface_bandwidth_oid + "." + str(value), host)/8 # bits/s to byte/s
+                rx_bytes = self._get_value_from_oid(self._interface_received_oid + "." + str(value), host)
+                tx_bytes = self._get_value_from_oid(self._interface_transmitted_oid + "." + str(value), host)
+                error = self._get_value_from_oid(self._interface_error_oid + "." + str(value), host)
 
-            interface = hardware_inspector.Interface(name=name.__str__(),mac=mac.__str__())
-            stats = hardware_inspector.InterfaceStats(bandwidth=bandwidth.__str__(),rx_bytes=rx_bytes.__str__(),
-                                                      tx_bytes=tx_bytes.__str__(),error=error.__str__())
+                interface = hardware_inspector.Interface(name=name.__str__(),mac=mac.__str__(), ip=ip.__str__())
+                stats = hardware_inspector.InterfaceStats(bandwidth=bandwidth.__str__(),rx_bytes=rx_bytes.__str__(),
+                                                          tx_bytes=tx_bytes.__str__(),error=error.__str__())
 
-            yield (interface, stats)
+                yield (interface, stats)
 
     def set_configuration(self, config):
         self._config = config
