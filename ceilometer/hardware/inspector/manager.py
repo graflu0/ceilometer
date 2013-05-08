@@ -32,13 +32,15 @@ LOG = log.getLogger(__name__)
 
 
 OPTS = [
-    cfg.StrOpt('snmp_inspector',
-        default='snmp',
-        help='Inspector to use for inspecting hw with snmp'),
+    cfg.ListOpt('disabled_hardware_inspectors',
+        default=[],
+        help='list of disabled hardware inspectors'),
     cfg.StrOpt('hardware_inspector_configurations',
         default=None,
-        help='dictionary of global hardware inspector configurations',
-    ),
+        help='dictionary of global hardware inspector configurations'),
+    cfg.StrOpt('snmp_inspector',
+        default='snmp',
+        help='Inspector to use for inspecting hw with snmp')
     #TODO add options here for new inspectors
     ]
 
@@ -52,24 +54,44 @@ class InspectorManager(object):
         else:
             global_conf = None
 
-        #TODO add more inspectors
-        self._snmp_inspector = self._get_inspector(cfg.CONF.snmp_inspector, global_conf)
+        self._inspectors = {}
+        #TODO add entry for inspectors
+        self._inspectors[cfg.CONF.snmp_inspector] = self._get_inspector(cfg.CONF.snmp_inspector, global_conf)
+
+        for key in self._inspectors:
+            print key
 
     def inspect_cpu(self, host):
-        #TODO use config to check which inspector to take to check this host
-        return self._snmp_inspector.inspect_cpu(host)
+        for key in self._inspectors:
+            if key not in cfg.CONF.disabled_hardware_inspectors:
+                try:
+                    return self._inspectors[cfg.CONF.snmp_inspector].inspect_cpu(host)
+                except NotImplementedError:
+                    LOG.error("inspect_cpu not implemented in " + key + "inspector")
 
     def inspect_nics(self, host):
-        #TODO use config to check which inspector to take to check this host
-        return self._snmp_inspector.inspect_network(host)
+        for key in self._inspectors:
+            if key not in cfg.CONF.disabled_hardware_inspectors:
+                try:
+                    return self._inspectors[cfg.CONF.snmp_inspector].inspect_network(host)
+                except NotImplementedError:
+                    LOG.error("inspect_cpu not implemented in " + key + " inspector")
 
     def inspect_diskspace(self, host):
-        #TODO use config to check which inspector to take to check this host
-        return self._snmp_inspector.inspect_diskspace(host)
+        for key in self._inspectors:
+            if key not in cfg.CONF.disabled_hardware_inspectors:
+                try:
+                    return self._inspectors[cfg.CONF.snmp_inspector].inspect_diskspace(host)
+                except NotImplementedError:
+                    LOG.error("inspect_cpu not implemented in " + key + " inspector")
 
     def inspect_memoryspace(self, host):
-        #TODO use config to check which inspector to take to check this host
-        return self._snmp_inspector.inspect_memoryspace(host)
+        for key in self._inspectors:
+            if key not in cfg.CONF.disabled_hardware_inspectors:
+                try:
+                    return self._inspectors[cfg.CONF.snmp_inspector].inspect_memoryspace(host)
+                except NotImplementedError:
+                    LOG.error("inspect_cpu not implemented in " + key + " inspector")
 
     def _get_inspector(self, inspector_type, global_conf):
         try:
@@ -78,7 +100,7 @@ class InspectorManager(object):
                 inspector_type,
                 invoke_on_load=True)
             inspector = mgr.driver
-            inspector.set_configuration(global_conf.get(cfg.CONF.snmp_inspector))
+            inspector.set_configuration(global_conf.get(inspector_type))
             return inspector
         except ImportError as e:
             LOG.error("Unable to load the hypervisor inspector: %s" % (e))
