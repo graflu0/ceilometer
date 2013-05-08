@@ -2,6 +2,8 @@
 
 #disabled_hardware_pollsters=network
 
+#disabled_hardware_inspectors=snmp
+
 hardware_inspector_configurations = {"snmp" : {"securityName": "public",
 						"port":	161},
 						"smart":{"port":8888}}
