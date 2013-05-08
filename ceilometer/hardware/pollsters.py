@@ -237,5 +237,3 @@ class MemorySpacePollster(plugin.HardwarePollster):
             self.LOG.warning('could not get memory usage for %s with id %s: %s',
                 host.ip_address, host.id, err)
             self.LOG.exception(err)
-
-
