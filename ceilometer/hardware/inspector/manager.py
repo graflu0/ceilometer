@@ -24,6 +24,7 @@ from stevedore import driver
 from ceilometer.openstack.common import log
 from ceilometer.hardware.inspector.snmp import inspector as snmp_inspector
 from ceilometer.hardware.inspector import inspector as inspector_interface
+import json
 
 
 LOG = log.getLogger(__name__)
@@ -33,7 +34,11 @@ LOG = log.getLogger(__name__)
 OPTS = [
     cfg.StrOpt('snmp_inspector',
         default='snmp',
-        help='Inspector to use for inspecting hw with snmp')
+        help='Inspector to use for inspecting hw with snmp'),
+    cfg.StrOpt('hardware_inspector_configurations',
+        default=None,
+        help='dictionary of global hardware inspector configurations',
+    ),
     #TODO add options here for new inspectors
     ]
 
@@ -41,7 +46,12 @@ cfg.CONF.register_opts(OPTS)
 
 class InspectorManager(object):
 
-    def __init__(self, global_conf):
+    def __init__(self):
+        if cfg.CONF.hardware_inspector_configurations is not None :
+            global_conf = json.loads(cfg.CONF.hardware_inspector_configurations)
+        else:
+            global_conf = None
+
         #TODO add more inspectors
         self._snmp_inspector = self._get_inspector(cfg.CONF.snmp_inspector, global_conf)
 
@@ -75,5 +85,5 @@ class InspectorManager(object):
             #TODO set configuration
             generic_inspector = inspector_interface.Inspector()
             if(global_conf):
-                generic_inspector.set_config(global_conf.get(cfg.CONF.snmp_inspector))
+                generic_inspector.set_config(global_conf)
             return generic_inspector
