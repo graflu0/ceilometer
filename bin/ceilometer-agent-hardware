@@ -31,7 +31,9 @@ from ceilometer.openstack.common.rpc import service as rpc_service
 
 if __name__ == '__main__':
     #TODO delete print commands
-    prepare_service(sys.argv, program="hardware-agent")
+    print "Start hardware agent"
+    prepare_service(sys.argv)
+    print "prepare service fertig"
     mgr = manager.AgentManager()
     print("AgentManager initialisiert")
     topic = 'ceilometer.agent.hardware'
