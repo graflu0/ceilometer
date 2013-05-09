@@ -24,6 +24,7 @@ from stevedore import driver
 from ceilometer.openstack.common import log
 from ceilometer.hardware.inspector.snmp import inspector as snmp_inspector
 from ceilometer.hardware.inspector import inspector as inspector_interface
+import json
 
 
 LOG = log.getLogger(__name__)
@@ -31,6 +32,12 @@ LOG = log.getLogger(__name__)
 
 
 OPTS = [
+    cfg.ListOpt('disabled_hardware_inspectors',
+        default=[],
+        help='list of disabled hardware inspectors'),
+    cfg.StrOpt('hardware_inspector_configurations',
+        default=None,
+        help='dictionary of global hardware inspector configurations'),
     cfg.StrOpt('snmp_inspector',
         default='snmp',
         help='Inspector to use for inspecting hw with snmp')
@@ -41,25 +48,50 @@ cfg.CONF.register_opts(OPTS)
 
 class InspectorManager(object):
 
-    def __init__(self, global_conf):
-        #TODO add more inspectors
-        self._snmp_inspector = self._get_inspector(cfg.CONF.snmp_inspector, global_conf)
+    def __init__(self):
+        if cfg.CONF.hardware_inspector_configurations is not None :
+            global_conf = json.loads(cfg.CONF.hardware_inspector_configurations)
+        else:
+            global_conf = None
+
+        self._inspectors = {}
+        #TODO add entry for inspectors
+        self._inspectors[cfg.CONF.snmp_inspector] = self._get_inspector(cfg.CONF.snmp_inspector, global_conf)
+
+        for key in self._inspectors:
+            print key
 
     def inspect_cpu(self, host):
-        #TODO use config to check which inspector to take to check this host
-        return self._snmp_inspector.inspect_cpu(host)
+        for key in self._inspectors:
+            if key not in cfg.CONF.disabled_hardware_inspectors:
+                try:
+                    return self._inspectors[cfg.CONF.snmp_inspector].inspect_cpu(host)
+                except NotImplementedError:
+                    LOG.error("inspect_cpu not implemented in " + key + "inspector")
 
     def inspect_nics(self, host):
-        #TODO use config to check which inspector to take to check this host
-        return self._snmp_inspector.inspect_network(host)
+        for key in self._inspectors:
+            if key not in cfg.CONF.disabled_hardware_inspectors:
+                try:
+                    return self._inspectors[cfg.CONF.snmp_inspector].inspect_network(host)
+                except NotImplementedError:
+                    LOG.error("inspect_cpu not implemented in " + key + " inspector")
 
     def inspect_diskspace(self, host):
-        #TODO use config to check which inspector to take to check this host
-        return self._snmp_inspector.inspect_diskspace(host)
+        for key in self._inspectors:
+            if key not in cfg.CONF.disabled_hardware_inspectors:
+                try:
+                    return self._inspectors[cfg.CONF.snmp_inspector].inspect_diskspace(host)
+                except NotImplementedError:
+                    LOG.error("inspect_cpu not implemented in " + key + " inspector")
 
     def inspect_memoryspace(self, host):
-        #TODO use config to check which inspector to take to check this host
-        return self._snmp_inspector.inspect_memoryspace(host)
+        for key in self._inspectors:
+            if key not in cfg.CONF.disabled_hardware_inspectors:
+                try:
+                    return self._inspectors[cfg.CONF.snmp_inspector].inspect_memoryspace(host)
+                except NotImplementedError:
+                    LOG.error("inspect_cpu not implemented in " + key + " inspector")
 
     def _get_inspector(self, inspector_type, global_conf):
         try:
@@ -68,12 +100,12 @@ class InspectorManager(object):
                 inspector_type,
                 invoke_on_load=True)
             inspector = mgr.driver
-            inspector.set_configuration(global_conf.get(cfg.CONF.snmp_inspector))
+            inspector.set_configuration(global_conf.get(inspector_type))
             return inspector
         except ImportError as e:
             LOG.error("Unable to load the hypervisor inspector: %s" % (e))
             #TODO set configuration
             generic_inspector = inspector_interface.Inspector()
             if(global_conf):
-                generic_inspector.set_config(global_conf.get(cfg.CONF.snmp_inspector))
+                generic_inspector.set_config(global_conf)
             return generic_inspector
