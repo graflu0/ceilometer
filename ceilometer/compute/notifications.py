@@ -20,9 +20,9 @@
 
 from oslo.config import cfg
 
+from ceilometer.compute import instance
 from ceilometer import counter
 from ceilometer import plugin
-from ceilometer.compute import instance
 
 
 OPTS = [
@@ -89,7 +89,7 @@ class Memory(_Base):
         return [
             counter.Counter(name='memory',
                             type=counter.TYPE_GAUGE,
-                            unit='B',
+                            unit='MB',
                             volume=message['payload']['memory_mb'],
                             user_id=message['payload']['user_id'],
                             project_id=message['payload']['tenant_id'],
@@ -123,7 +123,7 @@ class RootDiskSize(_Base):
         return [
             counter.Counter(name='disk.root.size',
                             type=counter.TYPE_GAUGE,
-                            unit='B',
+                            unit='GB',
                             volume=message['payload']['root_gb'],
                             user_id=message['payload']['user_id'],
                             project_id=message['payload']['tenant_id'],
@@ -140,7 +140,7 @@ class EphemeralDiskSize(_Base):
         return [
             counter.Counter(name='disk.ephemeral.size',
                             type=counter.TYPE_GAUGE,
-                            unit='B',
+                            unit='GB',
                             volume=message['payload']['ephemeral_gb'],
                             user_id=message['payload']['user_id'],
                             project_id=message['payload']['tenant_id'],
@@ -172,3 +172,29 @@ class InstanceFlavor(_Base):
                 )
             )
         return counters
+
+
+class InstanceDelete(_Base):
+    """Handle the messages sent by the nova notifier plugin
+    when an instance is being deleted.
+    """
+
+    @staticmethod
+    def get_event_types():
+        return ['compute.instance.delete.samples']
+
+    def process_notification(self, message):
+        return [
+            counter.Counter(name=sample['name'],
+                            type=sample['type'],
+                            unit=sample['unit'],
+                            volume=sample['volume'],
+                            user_id=message['payload']['user_id'],
+                            project_id=message['payload']['tenant_id'],
+                            resource_id=message['payload']['instance_id'],
+                            timestamp=message['timestamp'],
+                            resource_metadata=self.notification_to_metadata(
+                                message),
+                            )
+            for sample in message['payload'].get('samples', [])
+        ]

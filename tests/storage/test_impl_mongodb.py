@@ -42,59 +42,32 @@
     pip install python-spidermonkey
 
   To run the tests *without* mim, set the environment variable
-  CEILOMETER_TEST_LIVE=1 before running tox.
+  CEILOMETER_TEST_MONGODB_URL to a MongoDB URL before running tox.
 
 """
 
-import mox
+import copy
+import datetime
 
 from tests.storage import base
-from ceilometer.storage.impl_test import TestConnection
-from ceilometer.tests.db import require_map_reduce
 
-
-class MongoDBEngine(base.DBEngineBase):
-
-    DBNAME = 'testdb'
-
-    def tearDown(self):
-        self.conn.drop_database(self.DBNAME)
-        super(MongoDBEngine, self).tearDown()
-
-    def get_connection(self):
-        conf = mox.Mox().CreateMockAnything()
-        conf.database_connection = 'mongodb://localhost/%s' % self.DBNAME
-        self.conn = TestConnection(conf)
-        self.db = self.conn.conn[self.DBNAME]
-        return self.conn
-
-    def clean_up(self):
-        self.conn.drop_database(self.DBNAME)
-
-    def get_sources_by_project_id(self, id):
-        project = self.db.project.find_one({'_id': id})
-        return list(project['source'])
-
-    def get_sources_by_user_id(self, id):
-        user = self.db.user.find_one({'_id': id})
-        return list(user['source'])
+from ceilometer.collector import meter
+from ceilometer import counter
+from ceilometer.storage.impl_mongodb import require_map_reduce
 
 
 class MongoDBEngineTestBase(base.DBTestBase):
-
-    def get_engine(cls):
-        return MongoDBEngine()
+    database_connection = 'mongodb://__test__'
 
 
 class IndexTest(MongoDBEngineTestBase):
 
     def test_indexes_exist(self):
         # ensure_index returns none if index already exists
-        assert self.engine is not None
-        assert not self.engine.db.resource.ensure_index('foo',
-                                                        name='resource_idx')
-        assert not self.engine.db.meter.ensure_index('foo',
-                                                     name='meter_idx')
+        assert not self.conn.db.resource.ensure_index('foo',
+                                                      name='resource_idx')
+        assert not self.conn.db.meter.ensure_index('foo',
+                                                   name='meter_idx')
 
 
 class UserTest(base.UserTest, MongoDBEngineTestBase):
@@ -113,36 +86,8 @@ class MeterTest(base.MeterTest, MongoDBEngineTestBase):
     pass
 
 
-class RawEventTest(base.RawEventTest, MongoDBEngineTestBase):
+class RawSampleTest(base.RawSampleTest, MongoDBEngineTestBase):
     pass
-
-
-class SumTest(base.SumTest, MongoDBEngineTestBase):
-
-    def setUp(self):
-        super(SumTest, self).setUp()
-        require_map_reduce(self.conn)
-
-
-class TestGetEventInterval(base.TestGetEventInterval, MongoDBEngineTestBase):
-
-    def setUp(self):
-        super(TestGetEventInterval, self).setUp()
-        require_map_reduce(self.conn)
-
-
-class MaxProjectTest(base.MaxProjectTest, MongoDBEngineTestBase):
-
-    def setUp(self):
-        super(MaxProjectTest, self).setUp()
-        require_map_reduce(self.conn)
-
-
-class MaxResourceTest(base.MaxResourceTest, MongoDBEngineTestBase):
-
-    def setUp(self):
-        super(MaxResourceTest, self).setUp()
-        require_map_reduce(self.conn)
 
 
 class StatisticsTest(base.StatisticsTest, MongoDBEngineTestBase):
@@ -150,3 +95,82 @@ class StatisticsTest(base.StatisticsTest, MongoDBEngineTestBase):
     def setUp(self):
         super(StatisticsTest, self).setUp()
         require_map_reduce(self.conn)
+
+
+class AlarmTest(base.AlarmTest, MongoDBEngineTestBase):
+    pass
+
+
+class CompatibilityTest(MongoDBEngineTestBase):
+
+    def prepare_data(self):
+        def old_record_metering_data(self, data):
+            self.db.user.update(
+                {'_id': data['user_id']},
+                {'$addToSet': {'source': data['source'],
+                               },
+                 },
+                upsert=True,
+            )
+            self.db.project.update(
+                {'_id': data['project_id']},
+                {'$addToSet': {'source': data['source'],
+                               },
+                 },
+                upsert=True,
+            )
+            received_timestamp = datetime.datetime.utcnow()
+            self.db.resource.update(
+                {'_id': data['resource_id']},
+                {'$set': {'project_id': data['project_id'],
+                          'user_id': data['user_id'],
+                          # Current metadata being used and when it was
+                          # last updated.
+                          'timestamp': data['timestamp'],
+                          'received_timestamp': received_timestamp,
+                          'metadata': data['resource_metadata'],
+                          'source': data['source'],
+                          },
+                 '$addToSet': {'meter': {'counter_name': data['counter_name'],
+                                         'counter_type': data['counter_type'],
+                                         },
+                               },
+                 },
+                upsert=True,
+            )
+
+            record = copy.copy(data)
+            self.db.meter.insert(record)
+            return
+
+        # Stubout with the old version DB schema, the one w/o 'counter_unit'
+        self.stubs.Set(self.conn,
+                       'record_metering_data',
+                       old_record_metering_data)
+        self.counters = []
+        c = counter.Counter(
+            'volume.size',
+            'gauge',
+            'GiB',
+            5,
+            'user-id',
+            'project1',
+            'resource-id',
+            timestamp=datetime.datetime(2012, 9, 25, 10, 30),
+            resource_metadata={'display_name': 'test-volume',
+                               'tag': 'self.counter',
+                               }
+        )
+        self.counters.append(c)
+        msg = meter.meter_message_from_counter(c,
+                                               secret='not-so-secret',
+                                               source='test')
+        self.conn.record_metering_data(self.conn, msg)
+
+    def test_counter_unit(self):
+        meters = list(self.conn.get_meters())
+        self.assertEqual(len(meters), 1)
+
+
+class CounterDataTypeTest(base.CounterDataTypeTest, MongoDBEngineTestBase):
+    pass

@@ -17,16 +17,16 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import textwrap
 import os
 import setuptools
+import textwrap
 
 from ceilometer.openstack.common import setup as common_setup
 
 requires = common_setup.parse_requirements(['tools/pip-requires'])
 depend_links = common_setup.parse_dependency_links(['tools/pip-requires'])
 project = 'ceilometer'
-version = common_setup.get_version(project, '2013.1')
+version = common_setup.get_version(project, '2013.2')
 
 url_base = 'http://tarballs.openstack.org/ceilometer/ceilometer-%s.tar.gz'
 
@@ -63,7 +63,11 @@ setuptools.setup(
         'Topic :: System :: Monitoring',
     ],
 
-    packages=setuptools.find_packages(exclude=['bin']),
+    packages=setuptools.find_packages(exclude=['bin',
+                                               'tests',
+                                               'tests.*',
+                                               '*.tests',
+                                               'nova_tests']),
     cmdclass=common_setup.get_cmdclass(),
     package_data={
         "ceilometer":
@@ -92,6 +96,7 @@ setuptools.setup(
     [ceilometer.collector]
     instance = ceilometer.compute.notifications:Instance
     instance_flavor = ceilometer.compute.notifications:InstanceFlavor
+    instance_delete = ceilometer.compute.notifications:InstanceDelete
     memory = ceilometer.compute.notifications:Memory
     vcpus = ceilometer.compute.notifications:VCpus
     disk_root_size = ceilometer.compute.notifications:RootDiskSize
@@ -133,7 +138,7 @@ setuptools.setup(
     mysql = ceilometer.storage.impl_sqlalchemy:SQLAlchemyStorage
     postgresql = ceilometer.storage.impl_sqlalchemy:SQLAlchemyStorage
     sqlite = ceilometer.storage.impl_sqlalchemy:SQLAlchemyStorage
-    test = ceilometer.storage.impl_test:TestDBStorage
+    hbase = ceilometer.storage.impl_hbase:HBaseStorage
 
     [ceilometer.compute.virt]
     libvirt = ceilometer.compute.virt.libvirt.inspector:LibvirtInspector

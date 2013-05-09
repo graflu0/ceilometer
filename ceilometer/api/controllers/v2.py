@@ -32,26 +32,65 @@
 import datetime
 import inspect
 import pecan
-from pecan import request
-from pecan.rest import RestController
+from pecan import rest
 
 import wsme
 import wsmeext.pecan as wsme_pecan
-from wsme.types import Base, text, Enum
+from wsme import types as wtypes
 
-from ceilometer.openstack.common import log as logging
+from ceilometer.openstack.common import log
 from ceilometer.openstack.common import timeutils
+from ceilometer import counter
 from ceilometer import storage
 
-
-LOG = logging.getLogger(__name__)
-
-
-operation_kind = Enum(str, 'lt', 'le', 'eq', 'ne', 'ge', 'gt')
+LOG = log.getLogger(__name__)
 
 
-class Query(Base):
-    """Query filter.
+operation_kind = wtypes.Enum(str, 'lt', 'le', 'eq', 'ne', 'ge', 'gt')
+
+
+class _Base(wtypes.Base):
+
+    @classmethod
+    def from_db_model(cls, m):
+        return cls(**(m.as_dict()))
+
+    @classmethod
+    def from_db_and_links(cls, m, links):
+        return cls(links=links, **(m.as_dict()))
+
+    def as_dict(self, db_model):
+        valid_keys = inspect.getargspec(db_model.__init__)[0]
+        if 'self' in valid_keys:
+            valid_keys.remove('self')
+
+        return dict((k, getattr(self, k))
+                    for k in valid_keys
+                    if hasattr(self, k) and
+                    getattr(self, k) != wsme.Unset)
+
+
+class Link(_Base):
+    """A link representation
+    """
+
+    href = wtypes.text
+    "The url of a link"
+
+    rel = wtypes.text
+    "The name of a link"
+
+    @classmethod
+    def sample(cls):
+        return cls(href=('http://localhost:8777/v2/meters/volume?'
+                         'q.field=resource_id&'
+                         'q.value=bd9431c1-8d69-4ad3-803a-8d4a6b89fd36'),
+                   rel='volume'
+                   )
+
+
+class Query(_Base):
+    """Sample query filter.
     """
 
     _op = None  # provide a default
@@ -62,7 +101,7 @@ class Query(Base):
     def set_op(self, value):
         self._op = value
 
-    field = text
+    field = wtypes.text
     "The name of the field to test"
 
     #op = wsme.wsattr(operation_kind, default='eq')
@@ -70,7 +109,7 @@ class Query(Base):
     op = wsme.wsproperty(operation_kind, get_op, set_op)
     "The comparison operator. Defaults to 'eq'."
 
-    value = text
+    value = wtypes.text
     "The value to compare against the stored data"
 
     def __repr__(self):
@@ -195,49 +234,60 @@ def _flatten_metadata(metadata):
     """Return flattened resource metadata without nested structures
     and with all values converted to unicode strings.
     """
-    return dict((k, unicode(v))
-                for k, v in metadata.iteritems()
-                if type(v) not in set([list, dict, set]))
+    if metadata:
+        return dict((k, unicode(v))
+                    for k, v in metadata.iteritems()
+                    if type(v) not in set([list, dict, set]))
+    return {}
 
 
-class Sample(Base):
+def _make_link(rel_name, url, type, type_arg, query=None):
+    query_str = ''
+    if query:
+        query_str = '?q.field=%s&q.value=%s' % (query['field'],
+                                                query['value'])
+    return Link(href=('%s/v2/%s/%s%s') % (url, type, type_arg, query_str),
+                rel=rel_name)
+
+
+class Sample(_Base):
     """A single measurement for a given meter and resource.
     """
 
-    source = text
+    source = wtypes.text
     "An identity source ID"
 
-    counter_name = text
+    counter_name = wtypes.text
     "The name of the meter"
     # FIXME(dhellmann): Make this meter_name?
 
-    counter_type = text
+    counter_type = wtypes.text
     "The type of the meter (see :ref:`measurements`)"
     # FIXME(dhellmann): Make this meter_type?
 
-    counter_unit = text
+    counter_unit = wtypes.text
     "The unit of measure for the value in counter_volume"
     # FIXME(dhellmann): Make this meter_unit?
 
     counter_volume = float
     "The actual measured value"
 
-    user_id = text
+    user_id = wtypes.text
     "The ID of the user who last triggered an update to the resource"
 
-    project_id = text
+    project_id = wtypes.text
     "The ID of the project or tenant that owns the resource"
 
-    resource_id = text
+    resource_id = wtypes.text
     "The ID of the :class:`Resource` for which the measurements are taken"
 
     timestamp = datetime.datetime
     "UTC date and time when the measurement was made"
 
-    resource_metadata = {text: text}
+    resource_metadata = {wtypes.text: wtypes.text}
     "Arbitrary metadata associated with the resource"
 
-    message_id = text
+    message_id = wtypes.text
     "A unique identifier for the sample"
 
     def __init__(self, counter_volume=None, resource_metadata={}, **kwds):
@@ -265,7 +315,7 @@ class Sample(Base):
                    )
 
 
-class Statistics(Base):
+class Statistics(_Base):
     """Computed statistics for a query.
     """
 
@@ -323,7 +373,7 @@ class Statistics(Base):
         # If we got valid timestamps back, compute a duration in minutes.
         #
         # If the min > max after clamping then we know the
-        # timestamps on the events fell outside of the time
+        # timestamps on the samples fell outside of the time
         # range we care about for the query, so treat them as
         # "invalid."
         #
@@ -353,7 +403,7 @@ class Statistics(Base):
                    )
 
 
-class MeterController(RestController):
+class MeterController(rest.RestController):
     """Manages operations on a single meter.
     """
     _custom_actions = {
@@ -361,35 +411,36 @@ class MeterController(RestController):
     }
 
     def __init__(self, meter_id):
-        request.context['meter_id'] = meter_id
+        pecan.request.context['meter_id'] = meter_id
         self._id = meter_id
 
     @wsme_pecan.wsexpose([Sample], [Query])
     def get_all(self, q=[]):
-        """Return sample data for the meter.
+        """Return samples for the meter.
 
         :param q: Filter rules for the data to be returned.
         """
-        kwargs = _query_to_kwargs(q, storage.EventFilter.__init__)
+        kwargs = _query_to_kwargs(q, storage.SampleFilter.__init__)
         kwargs['meter'] = self._id
-        f = storage.EventFilter(**kwargs)
-        return [Sample(**e)
-                for e in request.storage_conn.get_raw_events(f)
+        f = storage.SampleFilter(**kwargs)
+        return [Sample.from_db_model(e)
+                for e in pecan.request.storage_conn.get_samples(f)
                 ]
 
     @wsme_pecan.wsexpose([Statistics], [Query], int)
     def statistics(self, q=[], period=None):
-        """Computes the statistics of the meter events in the time range given.
+        """Computes the statistics of the samples in the time range given.
 
         :param q: Filter rules for the data to be returned.
         :param period: Returned result will be an array of statistics for a
                        period long of that number of seconds.
 
         """
-        kwargs = _query_to_kwargs(q, storage.EventFilter.__init__)
+        kwargs = _query_to_kwargs(q, storage.SampleFilter.__init__)
         kwargs['meter'] = self._id
-        f = storage.EventFilter(**kwargs)
-        computed = request.storage_conn.get_meter_statistics(f, period)
+        f = storage.SampleFilter(**kwargs)
+        computed = pecan.request.storage_conn.get_meter_statistics(f, period)
+        LOG.debug('computed value coming from %r', pecan.request.storage_conn)
         # Find the original timestamp in the query to use for clamping
         # the duration returned in the statistics.
         start = end = None
@@ -401,31 +452,32 @@ class MeterController(RestController):
 
         return [Statistics(start_timestamp=start,
                            end_timestamp=end,
-                           **c)
+                           **c.as_dict())
                 for c in computed]
 
 
-class Meter(Base):
+class Meter(_Base):
     """One category of measurements.
     """
 
-    name = text
+    name = wtypes.text
     "The unique name for the meter"
 
-    # FIXME(dhellmann): Make this an enum?
-    type = text
+    type = wtypes.Enum(str, counter.TYPE_GAUGE,
+                       counter.TYPE_CUMULATIVE,
+                       counter.TYPE_DELTA)
     "The meter type (see :ref:`measurements`)"
 
-    unit = text
+    unit = wtypes.text
     "The unit of measure"
 
-    resource_id = text
+    resource_id = wtypes.text
     "The ID of the :class:`Resource` for which the measurements are taken"
 
-    project_id = text
+    project_id = wtypes.text
     "The ID of the project or tenant that owns the resource"
 
-    user_id = text
+    user_id = wtypes.text
     "The ID of the user who last triggered an update to the resource"
 
     @classmethod
@@ -439,7 +491,7 @@ class Meter(Base):
                    )
 
 
-class MetersController(RestController):
+class MetersController(rest.RestController):
     """Works on meters."""
 
     @pecan.expose()
@@ -452,29 +504,32 @@ class MetersController(RestController):
 
         :param q: Filter rules for the meters to be returned.
         """
-        kwargs = _query_to_kwargs(q, request.storage_conn.get_meters)
-        return [Meter(**m)
-                for m in request.storage_conn.get_meters(**kwargs)]
+        kwargs = _query_to_kwargs(q, pecan.request.storage_conn.get_meters)
+        return [Meter.from_db_model(m)
+                for m in pecan.request.storage_conn.get_meters(**kwargs)]
 
 
-class Resource(Base):
+class Resource(_Base):
     """An externally defined object for which samples have been received.
     """
 
-    resource_id = text
+    resource_id = wtypes.text
     "The unique identifier for the resource"
 
-    project_id = text
+    project_id = wtypes.text
     "The ID of the owning project or tenant"
 
-    user_id = text
+    user_id = wtypes.text
     "The ID of the user who created the resource or updated it last"
 
     timestamp = datetime.datetime
     "UTC date and time of the last update to any meter for the resource"
 
-    metadata = {text: text}
+    metadata = {wtypes.text: wtypes.text}
     "Arbitrary metadata associated with the resource"
+
+    links = [Link]
+    "A list containing a self link and associated meter links"
 
     def __init__(self, metadata={}, **kwds):
         metadata = _flatten_metadata(metadata)
@@ -488,11 +543,29 @@ class Resource(Base):
                    timestamp=datetime.datetime.utcnow(),
                    metadata={'name1': 'value1',
                              'name2': 'value2'},
+                   links=[Link(href=('http://localhost:8777/v2/resources/'
+                                     'bd9431c1-8d69-4ad3-803a-8d4a6b89fd36'),
+                               rel='self'),
+                          Link(href=('http://localhost:8777/v2/meters/volume?'
+                                     'q.field=resource_id&'
+                                     'q.value=bd9431c1-8d69-4ad3-803a-'
+                                     '8d4a6b89fd36'),
+                               rel='volume')],
                    )
 
 
-class ResourcesController(RestController):
+class ResourcesController(rest.RestController):
     """Works on resources."""
+
+    def _resource_links(self, resource_id):
+        links = [_make_link('self', pecan.request.host_url, 'resources',
+                            resource_id)]
+        for meter in pecan.request.storage_conn.get_meters(resource=
+                                                           resource_id):
+            query = {'field': 'resource_id', 'value': resource_id}
+            links.append(_make_link(meter.name, pecan.request.host_url,
+                                    'meters', meter.name, query=query))
+        return links
 
     @wsme_pecan.wsexpose(Resource, unicode)
     def get_one(self, resource_id):
@@ -500,8 +573,10 @@ class ResourcesController(RestController):
 
         :param resource_id: The UUID of the resource.
         """
-        r = list(request.storage_conn.get_resources(resource=resource_id))[0]
-        return Resource(**r)
+        r = list(pecan.request.storage_conn.get_resources(
+                 resource=resource_id))[0]
+        return Resource.from_db_and_links(r,
+                                          self._resource_links(resource_id))
 
     @wsme_pecan.wsexpose([Resource], [Query])
     def get_all(self, q=[]):
@@ -509,11 +584,192 @@ class ResourcesController(RestController):
 
         :param q: Filter rules for the resources to be returned.
         """
-        kwargs = _query_to_kwargs(q, request.storage_conn.get_resources)
+        kwargs = _query_to_kwargs(q, pecan.request.storage_conn.get_resources)
         resources = [
-            Resource(**r)
-            for r in request.storage_conn.get_resources(**kwargs)]
+            Resource.from_db_and_links(r,
+                                       self._resource_links(r.resource_id))
+            for r in pecan.request.storage_conn.get_resources(**kwargs)]
         return resources
+
+
+class Alarm(_Base):
+    """One category of measurements.
+    """
+
+    alarm_id = wtypes.text
+    "The UUID of the alarm"
+
+    name = wtypes.text
+    "The name for the alarm"
+
+    description = wtypes.text
+    "The description of the alarm"
+
+    counter_name = wtypes.text
+    "The name of counter"
+
+    project_id = wtypes.text
+    "The ID of the project or tenant that owns the alarm"
+
+    user_id = wtypes.text
+    "The ID of the user who created the alarm"
+
+    comparison_operator = wtypes.Enum(str, 'lt', 'le', 'eq', 'ne', 'ge', 'gt')
+    "The comparison against the alarm threshold"
+
+    threshold = float
+    "The threshold of the alarm"
+
+    statistic = wtypes.Enum(str, 'max', 'min', 'avg', 'sum', 'count')
+    "The statistic to compare to the threshold"
+
+    enabled = bool
+    "This alarm is enabled?"
+
+    evaluation_periods = int
+    "The number of periods to evaluate the threshold"
+
+    period = float
+    "The time range in seconds over which to evaluate the threshold"
+
+    timestamp = datetime.datetime
+    "The date of the last alarm definition update"
+
+    state = wtypes.Enum(str, 'ok', 'alarm', 'insufficient data')
+    "The state offset the alarm"
+
+    state_timestamp = datetime.datetime
+    "The date of the last alarm state changed"
+
+    ok_actions = [wtypes.text]
+    "The actions to do when alarm state change to ok"
+
+    alarm_actions = [wtypes.text]
+    "The actions to do when alarm state change to alarm"
+
+    insufficient_data_actions = [wtypes.text]
+    "The actions to do when alarm state change to insufficient data"
+
+    matching_metadata = {wtypes.text: wtypes.text}
+    "The matching_metadata of the alarm"
+
+    def __init__(self, **kwargs):
+        super(Alarm, self).__init__(**kwargs)
+
+    @classmethod
+    def sample(cls):
+        return cls(alarm_id=None,
+                   name="SwiftObjectAlarm",
+                   description="An alarm",
+                   counter_name="storage.objects",
+                   comparison_operator="gt",
+                   threshold=200,
+                   statistic="avg",
+                   user_id="c96c887c216949acbdfbd8b494863567",
+                   project_id="c96c887c216949acbdfbd8b494863567",
+                   evaluation_periods=2,
+                   period=240,
+                   enabled=True,
+                   timestamp=datetime.datetime.utcnow(),
+                   state="ok",
+                   state_timestamp=datetime.datetime.utcnow(),
+                   ok_actions=["http://site:8000/ok"],
+                   alarm_actions=["http://site:8000/alarm"],
+                   insufficient_data_actions=["http://site:8000/nodata"],
+                   matching_metadata={"key_name":
+                                      "key_value"}
+                   )
+
+
+class AlarmsController(rest.RestController):
+    """Works on alarms."""
+
+    @wsme.validate(Alarm)
+    @wsme_pecan.wsexpose(Alarm, body=Alarm, status_code=201)
+    def post(self, data):
+        """Create a new alarm"""
+        conn = pecan.request.storage_conn
+
+        data.user_id = pecan.request.headers.get('X-User-Id')
+        data.project_id = pecan.request.headers.get('X-Project-Id')
+        data.alarm_id = wsme.Unset
+        data.state_timestamp = wsme.Unset
+        data.timestamp = timeutils.utcnow()
+
+        # make sure alarms are unique by name per project.
+        alarms = list(conn.get_alarms(name=data.name,
+                                      project=data.project_id))
+        if len(alarms) > 0:
+            raise wsme.exc.ClientSideError(_("Alarm with that name exists"))
+
+        try:
+            kwargs = data.as_dict(storage.models.Alarm)
+            alarm_in = storage.models.Alarm(**kwargs)
+        except Exception as ex:
+            LOG.exception(ex)
+            raise wsme.exc.ClientSideError(_("Alarm incorrect"))
+
+        alarm = conn.update_alarm(alarm_in)
+        return Alarm.from_db_model(alarm)
+
+    @wsme.validate(Alarm)
+    @wsme_pecan.wsexpose(Alarm, wtypes.text, body=Alarm)
+    def put(self, alarm_id, data):
+        """Modify an alarm"""
+        conn = pecan.request.storage_conn
+        data.state_timestamp = wsme.Unset
+        data.alarm_id = alarm_id
+        data.user_id = pecan.request.headers.get('X-User-Id')
+        data.project_id = pecan.request.headers.get('X-Project-Id')
+
+        alarms = list(conn.get_alarms(alarm_id=alarm_id,
+                                      project=data.project_id))
+        if len(alarms) < 1:
+            raise wsme.exc.ClientSideError(_("Unknown alarm"))
+
+        # merge the new values from kwargs into the current
+        # alarm "alarm_in".
+        alarm_in = alarms[0]
+        kwargs = data.as_dict(storage.models.Alarm)
+        for k, v in kwargs.iteritems():
+            setattr(alarm_in, k, v)
+            if k == 'state':
+                alarm_in.state_timestamp = timeutils.utcnow()
+
+        alarm = conn.update_alarm(alarm_in)
+        return Alarm.from_db_model(alarm)
+
+    @wsme_pecan.wsexpose(None, wtypes.text, status_code=204)
+    def delete(self, alarm_id):
+        """Delete an alarm"""
+        conn = pecan.request.storage_conn
+        project_id = pecan.request.headers.get('X-Project-Id')
+        alarms = list(conn.get_alarms(alarm_id=alarm_id,
+                                      project=project_id))
+        if len(alarms) < 1:
+            raise wsme.exc.ClientSideError(_("Unknown alarm"))
+
+        conn.delete_alarm(alarm_id)
+
+    @wsme_pecan.wsexpose(Alarm, wtypes.text)
+    def get_one(self, alarm_id):
+        """Return one alarm"""
+        alarms = list(pecan.request.storage_conn.get_alarms(alarm_id=alarm_id))
+        if len(alarms) < 1:
+            raise wsme.exc.ClientSideError(_("Unknown alarm"))
+
+        return Alarm.from_db_model(alarms[0])
+
+    @wsme_pecan.wsexpose([Alarm], [Query])
+    def get_all(self, q=[]):
+        """Return all alarms, based on the query provided.
+
+        :param q: Filter rules for the alarms to be returned.
+        """
+        kwargs = _query_to_kwargs(q,
+                                  pecan.request.storage_conn.get_alarms)
+        return [Alarm.from_db_model(m)
+                for m in pecan.request.storage_conn.get_alarms(**kwargs)]
 
 
 class V2Controller(object):
@@ -521,3 +777,4 @@ class V2Controller(object):
 
     resources = ResourcesController()
     meters = MetersController()
+    alarms = AlarmsController()

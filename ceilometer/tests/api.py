@@ -24,14 +24,14 @@ import urllib
 
 import flask
 from oslo.config import cfg
-from pecan import set_config
-from pecan.testing import load_test_app
+import pecan
+import pecan.testing
 
-from ceilometer import storage
+from ceilometer.openstack.common import jsonutils
+from ceilometer.api import acl
 from ceilometer.api.v1 import app as v1_app
 from ceilometer.api.v1 import blueprint as v1_blueprint
 from ceilometer.tests import db as db_test_base
-from ceilometer.tests import base
 
 
 class TestBase(db_test_base.TestBase):
@@ -40,6 +40,7 @@ class TestBase(db_test_base.TestBase):
 
     def setUp(self):
         super(TestBase, self).setUp()
+        cfg.CONF.set_override("auth_version", "v2.0", group=acl.OPT_GROUP_NAME)
         self.app = v1_app.make_app(cfg.CONF,
                                    enable_acl=False,
                                    attach_storage=False)
@@ -66,14 +67,12 @@ class TestBase(db_test_base.TestBase):
         return rv
 
 
-class FunctionalTest(base.TestCase):
+class FunctionalTest(db_test_base.TestBase):
     """
     Used for functional tests of Pecan controllers where you need to
     test your literal application and its integration with the
     framework.
     """
-
-    DBNAME = 'testdb'
 
     PATH_PREFIX = ''
 
@@ -81,10 +80,7 @@ class FunctionalTest(base.TestCase):
 
     def setUp(self):
         super(FunctionalTest, self).setUp()
-
-        cfg.CONF.database_connection = 'test://localhost/%s' % self.DBNAME
-        self.conn = storage.get_connection(cfg.CONF)
-        self.conn.drop_database(self.DBNAME)
+        cfg.CONF.set_override("auth_version", "v2.0", group=acl.OPT_GROUP_NAME)
         self.app = self._make_app()
 
     def _make_app(self, enable_acl=False):
@@ -129,14 +125,48 @@ class FunctionalTest(base.TestCase):
             },
         }
 
-        return load_test_app(self.config)
+        return pecan.testing.load_test_app(self.config)
 
     def tearDown(self):
         super(FunctionalTest, self).tearDown()
-        set_config({}, overwrite=True)
+        pecan.set_config({}, overwrite=True)
+
+    def put_json(self, path, params, expect_errors=False, headers=None,
+                 extra_environ=None, status=None):
+        return self.post_json(path=path, params=params,
+                              expect_errors=expect_errors,
+                              headers=headers, extra_environ=extra_environ,
+                              status=status, method="put")
+
+    def post_json(self, path, params, expect_errors=False, headers=None,
+                  method="post", extra_environ=None, status=None):
+        full_path = self.PATH_PREFIX + path
+        print('%s: %s %s' % (method.upper(), full_path, params))
+        response = getattr(self.app, "%s_json" % method)(
+            full_path,
+            params=params,
+            headers=headers,
+            status=status,
+            extra_environ=extra_environ,
+            expect_errors=expect_errors
+        )
+        print('GOT:%s' % response)
+        return response
+
+    def delete(self, path, expect_errors=False, headers=None,
+               extra_environ=None, status=None):
+        full_path = self.PATH_PREFIX + path
+        print('DELETE: %s' % (full_path))
+        response = self.app.delete(full_path,
+                                   headers=headers,
+                                   status=status,
+                                   extra_environ=extra_environ,
+                                   expect_errors=expect_errors)
+        print('GOT:%s' % response)
+        return response
 
     def get_json(self, path, expect_errors=False, headers=None,
-                 q=[], **params):
+                 extra_environ=None, q=[], **params):
         full_path = self.PATH_PREFIX + path
         query_params = {'q.field': [],
                         'q.value': [],
@@ -149,12 +179,13 @@ class FunctionalTest(base.TestCase):
         all_params.update(params)
         if q:
             all_params.update(query_params)
-        print 'GET: %s %r' % (full_path, all_params)
+        print('GET: %s %r' % (full_path, all_params))
         response = self.app.get(full_path,
                                 params=all_params,
                                 headers=headers,
+                                extra_environ=extra_environ,
                                 expect_errors=expect_errors)
         if not expect_errors:
             response = response.json
-        print 'GOT:', response
+        print('GOT:%s' % response)
         return response

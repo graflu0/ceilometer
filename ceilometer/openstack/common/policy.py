@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2012 OpenStack, LLC.
+# Copyright (c) 2012 OpenStack Foundation.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -57,7 +57,6 @@ as it allows particular rules to be explicitly disabled.
 """
 
 import abc
-import logging
 import re
 import urllib
 
@@ -65,6 +64,7 @@ import urllib2
 
 from ceilometer.openstack.common.gettextutils import _
 from ceilometer.openstack.common import jsonutils
+from ceilometer.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)

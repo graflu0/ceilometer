@@ -23,9 +23,8 @@
 from oslo.config import cfg
 
 from ceilometer import counter
+from ceilometer.openstack.common import log
 from ceilometer import plugin
-from ceilometer.openstack.common import log as logging
-
 
 OPTS = [
     cfg.StrOpt('quantum_control_exchange',
@@ -33,10 +32,9 @@ OPTS = [
                help="Exchange name for Quantum notifications"),
 ]
 
-
 cfg.CONF.register_opts(OPTS)
 
-LOG = logging.getLogger(__name__)
+LOG = log.getLogger(__name__)
 
 
 class NetworkNotificationBase(plugin.NotificationBase):
@@ -72,11 +70,12 @@ class NetworkNotificationBase(plugin.NotificationBase):
         LOG.info('network notification %r', message)
         message['payload'] = message['payload'][self.resource_name]
         metadata = self.notification_to_metadata(message)
-        counter_name = getattr(self, "counter_name", self.resource_name)
+        counter_name = getattr(self, 'counter_name', self.resource_name)
+        unit_value = getattr(self, 'unit', self.resource_name)
 
         yield counter.Counter(name=counter_name,
                               type=counter.TYPE_GAUGE,
-                              unit=self.resource_name,
+                              unit=unit_value,
                               volume=1,
                               user_id=message['_context_user_id'],
                               project_id=message['payload']['tenant_id'],
@@ -90,7 +89,7 @@ class NetworkNotificationBase(plugin.NotificationBase):
             yield counter.Counter(name=counter_name
                                   + "." + event_type_split[1],
                                   type=counter.TYPE_DELTA,
-                                  unit=self.resource_name,
+                                  unit=unit_value,
                                   volume=1,
                                   user_id=message['_context_user_id'],
                                   project_id=message['payload']['tenant_id'],
@@ -191,3 +190,4 @@ class FloatingIP(NetworkNotificationBase):
 
     resource_name = 'floatingip'
     counter_name = 'ip.floating'
+    unit = 'ip'

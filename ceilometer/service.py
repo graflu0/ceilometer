@@ -22,9 +22,9 @@ import socket
 
 from oslo.config import cfg
 
-from ceilometer.openstack.common import rpc
 from ceilometer.openstack.common import context
 from ceilometer.openstack.common import log
+from ceilometer.openstack.common import rpc
 from ceilometer.openstack.common.rpc import service as rpc_service
 
 
@@ -78,7 +78,15 @@ def _sanitize_cmd_line(argv):
     return [a for a in argv if a in cli_opt_names]
 
 
-def prepare_service(argv=[], program=None):
+def prepare_service(argv=[]):
     rpc.set_defaults(control_exchange='ceilometer')
-    cfg.CONF(argv[1:], project='ceilometer', prog=program)
+    cfg.set_defaults(log.log_opts,
+                     default_log_levels=['amqplib=WARN',
+                                         'qpid.messaging=INFO',
+                                         'sqlalchemy=WARN',
+                                         'keystoneclient=INFO',
+                                         'stevedore=INFO',
+                                         'eventlet.wsgi.server=WARN'
+                                         ])
+    cfg.CONF(argv[1:], project='ceilometer')
     log.setup('ceilometer')

@@ -19,38 +19,54 @@
 """
 
 import abc
+import datetime
+import math
 
-from ceilometer.openstack.common import log
+from ceilometer.openstack.common import timeutils
 
-LOG = log.getLogger(__name__)
+
+def iter_period(start, end, period):
+    """Split a time from start to end in periods of a number of seconds. This
+    function yield the (start, end) time for each period composing the time
+    passed as argument.
+
+    :param start: When the period set start.
+    :param end: When the period end starts.
+    :param period: The duration of the period.
+
+    """
+    period_start = start
+    increment = datetime.timedelta(seconds=period)
+    for i in xrange(int(math.ceil(
+            timeutils.delta_seconds(start, end)
+            / float(period)))):
+        next_start = period_start + increment
+        yield (period_start, next_start)
+        period_start = next_start
 
 
 class StorageEngine(object):
-    """Base class for storage engines.
-    """
+    """Base class for storage engines."""
 
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def register_opts(self, conf):
-        """Register any configuration options used by this engine.
-        """
+        """Register any configuration options used by this engine."""
 
     @abc.abstractmethod
     def get_connection(self, conf):
-        """Return a Connection instance based on the configuration settings.
-        """
+        """Return a Connection instance based on the configuration settings."""
 
 
 class Connection(object):
-    """Base class for storage system connections.
-    """
+    """Base class for storage system connections."""
 
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def __init__(self, conf):
-        """Constructor"""
+        """Constructor."""
 
     @abc.abstractmethod
     def upgrade(self, version=None):
@@ -84,15 +100,8 @@ class Connection(object):
     def get_resources(self, user=None, project=None, source=None,
                       start_timestamp=None, end_timestamp=None,
                       metaquery={}, resource=None):
-        """Return an iterable of dictionaries containing resource information.
-
-        { 'resource_id': UUID of the resource,
-          'project_id': UUID of project owning the resource,
-          'user_id': UUID of user owning the resource,
-          'timestamp': UTC datetime of last update to the resource,
-          'metadata': most current metadata for the resource,
-          'meter': list of the meters reporting data for the resource,
-          }
+        """Return an iterable of models.Resource instances containing
+        resource information.
 
         :param user: Optional ID for user that owns the resource.
         :param project: Optional ID for project that owns the resource.
@@ -106,15 +115,8 @@ class Connection(object):
     @abc.abstractmethod
     def get_meters(self, user=None, project=None, resource=None, source=None,
                    metaquery={}):
-        """Return an iterable of dictionaries containing meter information.
-
-        { 'name': name of the meter,
-          'type': type of the meter (guage, counter),
-          'unit': unit of the meter,
-          'resource_id': UUID of the resource,
-          'project_id': UUID of project owning the resource,
-          'user_id': UUID of user owning the resource,
-          }
+        """Return an iterable of model.Meter instances containing meter
+        information.
 
         :param user: Optional ID for user that owns the resource.
         :param project: Optional ID for project that owns the resource.
@@ -124,61 +126,33 @@ class Connection(object):
         """
 
     @abc.abstractmethod
-    def get_raw_events(self, event_filter):
-        """Return an iterable of raw event data as created by
-        :func:`ceilometer.meter.meter_message_from_counter`.
+    def get_samples(self, sample_filter):
+        """Return an iterable of model.Sample instances
         """
 
     @abc.abstractmethod
-    def get_volume_sum(self, event_filter):
-        """Return the sum of the volume field for the events
-        described by the query parameters.
+    def get_meter_statistics(self, sample_filter, period=None):
+        """Return an iterable of model.Statistics instances.
 
         The filter must have a meter value set.
-
-        { 'resource_id': UUID string for the resource,
-          'value': The sum for the volume.
-          }
         """
 
     @abc.abstractmethod
-    def get_volume_max(self, event_filter):
-        """Return the maximum of the volume field for the events
-        described by the query parameters.
-
-        The filter must have a meter value set.
-
-        { 'resource_id': UUID string for the resource,
-          'value': The max for the volume.
-          }
+    def get_alarms(self, name=None, user=None,
+                   project=None, enabled=True, alarm_id=None):
+        """Yields a lists of alarms that match filters
         """
 
     @abc.abstractmethod
-    def get_event_interval(self, event_filter):
-        """Return the min and max timestamps from events,
-        using the event_filter to limit the events seen.
-
-        ( datetime.datetime(), datetime.datetime() )
+    def update_alarm(self, alarm):
+        """update alarm
         """
 
     @abc.abstractmethod
-    def get_meter_statistics(self, event_filter, period=None):
-        """Return a dictionary containing meter statistics.
-        described by the query parameters.
-
-        The filter must have a meter value set.
-
-        { 'min':
-          'max':
-          'avg':
-          'sum':
-          'count':
-          'period':
-          'period_start':
-          'period_end':
-          'duration':
-          'duration_start':
-          'duration_end':
-          }
-
+    def delete_alarm(self, alarm_id):
+        """Delete a alarm
         """
+
+    @abc.abstractmethod
+    def clear(self):
+        """Clear database."""

@@ -23,13 +23,14 @@ import time
 
 from oslo.config import cfg
 import sqlalchemy
-from sqlalchemy.exc import DisconnectionError, OperationalError
+import sqlalchemy.exc as exc
 import sqlalchemy.orm
-from sqlalchemy.pool import NullPool, StaticPool
+import sqlalchemy.pool as pool
 
-import ceilometer.openstack.common.log as logging
+from ceilometer.openstack.common import log
 
-LOG = logging.getLogger(__name__)
+
+LOG = log.getLogger(__name__)
 
 _MAKER = None
 _ENGINE = None
@@ -60,12 +61,13 @@ sql_opts = [
 cfg.CONF.register_opts(sql_opts)
 
 
-def get_session(autocommit=True, expire_on_commit=False, autoflush=True):
+def get_session(database_connection, conf,
+                autocommit=True, expire_on_commit=False, autoflush=True):
     """Return a SQLAlchemy session."""
     global _MAKER
 
     if _MAKER is None:
-        engine = get_engine()
+        engine = get_engine(database_connection, conf)
         _MAKER = get_maker(engine, autocommit, expire_on_commit, autoflush)
 
     session = _MAKER()
@@ -73,7 +75,7 @@ def get_session(autocommit=True, expire_on_commit=False, autoflush=True):
 
 
 def synchronous_switch_listener(dbapi_conn, connection_rec):
-    """Switch sqlite connections to non-synchronous mode"""
+    """Switch sqlite connections to non-synchronous mode."""
     dbapi_conn.execute("PRAGMA synchronous = OFF")
 
 
@@ -99,7 +101,7 @@ def ping_listener(dbapi_conn, connection_rec, connection_proxy):
     except dbapi_conn.OperationalError, ex:
         if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
             LOG.warn('Got mysql server has gone away: %s', ex)
-            raise DisconnectionError("Database server went away")
+            raise exc.DisconnectionError("Database server went away")
         else:
             raise
 
@@ -115,44 +117,44 @@ def is_db_connection_error(args):
     return False
 
 
-def get_engine():
+def get_engine(database_connection, conf):
     """Return a SQLAlchemy engine."""
     global _ENGINE
     if _ENGINE is None:
         connection_dict = sqlalchemy.engine.url.make_url(
-            cfg.CONF.database_connection)
+            database_connection)
 
         engine_args = {
-            "pool_recycle": cfg.CONF.sql_idle_timeout,
+            "pool_recycle": conf.sql_idle_timeout,
             "echo": False,
             'convert_unicode': True,
         }
 
         # Map our SQL debug level to SQLAlchemy's options
-        if cfg.CONF.sql_connection_debug >= 100:
+        if conf.sql_connection_debug >= 100:
             engine_args['echo'] = 'debug'
-        elif cfg.CONF.sql_connection_debug >= 50:
+        elif conf.sql_connection_debug >= 50:
             engine_args['echo'] = True
 
         if "sqlite" in connection_dict.drivername:
-            engine_args["poolclass"] = NullPool
+            engine_args["poolclass"] = pool.NullPool
 
-            if cfg.CONF.database_connection == "sqlite://":
-                engine_args["poolclass"] = StaticPool
+            if database_connection == "sqlite://":
+                engine_args["poolclass"] = pool.StaticPool
                 engine_args["connect_args"] = {'check_same_thread': False}
 
-        _ENGINE = sqlalchemy.create_engine(cfg.CONF.database_connection,
+        _ENGINE = sqlalchemy.create_engine(database_connection,
                                            **engine_args)
 
         if 'mysql' in connection_dict.drivername:
             sqlalchemy.event.listen(_ENGINE, 'checkout', ping_listener)
         elif "sqlite" in connection_dict.drivername:
-            if not cfg.CONF.sqlite_synchronous:
+            if not conf.sqlite_synchronous:
                 sqlalchemy.event.listen(_ENGINE, 'connect',
                                         synchronous_switch_listener)
             sqlalchemy.event.listen(_ENGINE, 'connect', add_regexp_listener)
 
-        if (cfg.CONF.sql_connection_trace and
+        if (conf.sql_connection_trace and
                 _ENGINE.dialect.dbapi.__name__ == 'MySQLdb'):
             import MySQLdb.cursors
             _do_query = debug_mysql_do_query()
@@ -160,11 +162,11 @@ def get_engine():
 
         try:
             _ENGINE.connect()
-        except OperationalError, e:
+        except exc.OperationalError, e:
             if not is_db_connection_error(e.args[0]):
                 raise
 
-            remaining = cfg.CONF.sql_max_retries
+            remaining = conf.sql_max_retries
             if remaining == -1:
                 remaining = 'infinite'
             while True:
@@ -172,11 +174,11 @@ def get_engine():
                 LOG.warn(msg % remaining)
                 if remaining != 'infinite':
                     remaining -= 1
-                time.sleep(cfg.CONF.sql_retry_interval)
+                time.sleep(conf.sql_retry_interval)
                 try:
                     _ENGINE.connect()
                     break
-                except OperationalError, e:
+                except exc.OperationalError, e:
                     if (remaining != 'infinite' and remaining == 0) \
                             or not is_db_connection_error(e.args[0]):
                         raise

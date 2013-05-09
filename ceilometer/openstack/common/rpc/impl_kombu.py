@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-#    Copyright 2011 OpenStack LLC
+#    Copyright 2011 OpenStack Foundation
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -176,7 +176,7 @@ class ConsumerBase(object):
         """Cancel the consuming from the queue, if it has started"""
         try:
             self.queue.cancel(self.tag)
-        except KeyError, e:
+        except KeyError as e:
             # NOTE(comstud): Kludge to get around a amqplib bug
             if str(e) != "u'%s'" % self.tag:
                 raise
@@ -520,7 +520,7 @@ class Connection(object):
                 return
             except (IOError, self.connection_errors) as e:
                 pass
-            except Exception, e:
+            except Exception as e:
                 # NOTE(comstud): Unfortunately it's possible for amqplib
                 # to return an error not covered by its transport
                 # connection_errors in the case of a timeout waiting for
@@ -561,10 +561,10 @@ class Connection(object):
         while True:
             try:
                 return method(*args, **kwargs)
-            except (self.connection_errors, socket.timeout, IOError), e:
+            except (self.connection_errors, socket.timeout, IOError) as e:
                 if error_callback:
                     error_callback(e)
-            except Exception, e:
+            except Exception as e:
                 # NOTE(comstud): Unfortunately it's possible for amqplib
                 # to return an error not covered by its transport
                 # connection_errors in the case of a timeout waiting for
@@ -624,8 +624,8 @@ class Connection(object):
 
         def _error_callback(exc):
             if isinstance(exc, socket.timeout):
-                LOG.exception(_('Timed out waiting for RPC response: %s') %
-                              str(exc))
+                LOG.debug(_('Timed out waiting for RPC response: %s') %
+                          str(exc))
                 raise rpc_common.Timeout()
             else:
                 LOG.exception(_('Failed to consume message from queue: %s') %

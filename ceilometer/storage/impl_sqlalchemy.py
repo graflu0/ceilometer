@@ -1,6 +1,7 @@
 # -*- encoding: utf-8 -*-
 #
 # Author: John Tran <jhtran@att.com>
+#         Julien Danjou <julien@danjou.info>
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -13,29 +14,29 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-"""SQLAlchemy storage backend
-"""
+
+"""SQLAlchemy storage backend."""
 
 from __future__ import absolute_import
 
 import copy
-import datetime
-import math
+import os
 from sqlalchemy import func
 
 from ceilometer.openstack.common import log
 from ceilometer.openstack.common import timeutils
 from ceilometer.storage import base
-from ceilometer.storage.sqlalchemy.models import Meter, Project, Resource
-from ceilometer.storage.sqlalchemy.models import Source, User
-import ceilometer.storage.sqlalchemy.session as sqlalchemy_session
+from ceilometer.storage import models as api_models
 from ceilometer.storage.sqlalchemy import migration
+from ceilometer.storage.sqlalchemy.models import Meter, Project, Resource
+from ceilometer.storage.sqlalchemy.models import Source, User, Base
+import ceilometer.storage.sqlalchemy.session as sqlalchemy_session
 
 LOG = log.getLogger(__name__)
 
 
 class SQLAlchemyStorage(base.StorageEngine):
-    """Put the data into a SQLAlchemy database
+    """Put the data into a SQLAlchemy database.
 
     Tables::
 
@@ -64,8 +65,6 @@ class SQLAlchemyStorage(base.StorageEngine):
           - the metadata for resources
           - { id: resource uuid
               resource_metadata: metadata dictionaries
-              received_timestamp: received datetime
-              timestamp: datetime
               project_id: project uuid      (->project.id)
               user_id: user uuid            (->user.id)
               }
@@ -82,65 +81,66 @@ class SQLAlchemyStorage(base.StorageEngine):
     OPTIONS = []
 
     def register_opts(self, conf):
-        """Register any configuration options used by this engine.
-        """
+        """Register any configuration options used by this engine."""
         conf.register_opts(self.OPTIONS)
 
-    def get_connection(self, conf):
+    @staticmethod
+    def get_connection(conf):
         """Return a Connection instance based on the configuration settings.
         """
         return Connection(conf)
 
 
-def make_query_from_filter(query, event_filter, require_meter=True):
+def make_query_from_filter(query, sample_filter, require_meter=True):
     """Return a query dictionary based on the settings in the filter.
 
-    :param filter: EventFilter instance
+    :param filter: QueryFilter instance
     :param require_meter: If true and the filter does not have a meter,
                           raise an error.
     """
 
-    if event_filter.meter:
-        query = query.filter(Meter.counter_name == event_filter.meter)
+    if sample_filter.meter:
+        query = query.filter(Meter.counter_name == sample_filter.meter)
     elif require_meter:
         raise RuntimeError('Missing required meter specifier')
-    if event_filter.source:
-        query = query.filter(Meter.sources.any(id=event_filter.source))
-    if event_filter.start:
-        ts_start = event_filter.start
+    if sample_filter.source:
+        query = query.filter(Meter.sources.any(id=sample_filter.source))
+    if sample_filter.start:
+        ts_start = sample_filter.start
         query = query.filter(Meter.timestamp >= ts_start)
-    if event_filter.end:
-        ts_end = event_filter.end
+    if sample_filter.end:
+        ts_end = sample_filter.end
         query = query.filter(Meter.timestamp < ts_end)
-    if event_filter.user:
-        query = query.filter_by(user_id=event_filter.user)
-    elif event_filter.project:
-        query = query.filter_by(project_id=event_filter.project)
-    if event_filter.resource:
-        query = query.filter_by(resource_id=event_filter.resource)
+    if sample_filter.user:
+        query = query.filter_by(user_id=sample_filter.user)
+    if sample_filter.project:
+        query = query.filter_by(project_id=sample_filter.project)
+    if sample_filter.resource:
+        query = query.filter_by(resource_id=sample_filter.resource)
 
-    if event_filter.metaquery:
+    if sample_filter.metaquery:
         raise NotImplementedError('metaquery not implemented')
 
     return query
 
 
 class Connection(base.Connection):
-    """SqlAlchemy connection.
-    """
+    """SqlAlchemy connection."""
 
     def __init__(self, conf):
-        LOG.info('connecting to %s', conf.database_connection)
-        self.session = self._get_connection(conf)
-        return
+        url = conf.database_connection
+        if url == 'sqlite://':
+            url = os.environ.get('CEILOMETER_TEST_SQL_URL', url)
+        LOG.info('connecting to %s', url)
+        self.session = sqlalchemy_session.get_session(url, conf)
 
     def upgrade(self, version=None):
         migration.db_sync(self.session.get_bind(), version=version)
 
-    def _get_connection(self, conf):
-        """Return a connection to the database.
-        """
-        return sqlalchemy_session.get_session()
+    def clear(self):
+        engine = self.session.get_bind()
+        for table in reversed(Base.metadata.sorted_tables):
+            engine.execute(table.delete())
 
     def record_metering_data(self, data):
         """Write the data to the backend storage system.
@@ -172,7 +172,6 @@ class Connection(base.Connection):
             project = None
 
         # Record the updated resource metadata
-        rtimestamp = datetime.datetime.utcnow()
         rmetadata = data['resource_metadata']
 
         resource = self.session.merge(Resource(id=str(data['resource_id'])))
@@ -180,14 +179,12 @@ class Connection(base.Connection):
             resource.sources.append(source)
         resource.project = project
         resource.user = user
-        resource.timestamp = data['timestamp']
-        resource.received_timestamp = rtimestamp
         # Current metadata being used and when it was last updated.
         resource.resource_metadata = rmetadata
-        # autoflush didn't catch this one, requires manual flush
+        # Autoflush didn't catch this one, requires manual flush.
         self.session.flush()
 
-        # Record the raw data for the event.
+        # Record the raw data for the meter.
         meter = Meter(counter_type=data['counter_type'],
                       counter_unit=data['counter_unit'],
                       counter_name=data['counter_name'], resource=resource)
@@ -209,7 +206,7 @@ class Connection(base.Connection):
 
         :param source: Optional source filter.
         """
-        query = model_query(User.id, session=self.session)
+        query = self.session.query(User.id)
         if source is not None:
             query = query.filter(User.sources.any(id=source))
         return (x[0] for x in query.all())
@@ -219,7 +216,7 @@ class Connection(base.Connection):
 
         :param source: Optional source filter.
         """
-        query = model_query(Project.id, session=self.session)
+        query = self.session.query(Project.id)
         if source:
             query = query.filter(Project.sources.any(id=source))
         return (x[0] for x in query.all())
@@ -227,15 +224,7 @@ class Connection(base.Connection):
     def get_resources(self, user=None, project=None, source=None,
                       start_timestamp=None, end_timestamp=None,
                       metaquery={}, resource=None):
-        """Return an iterable of dictionaries containing resource information.
-
-        { 'resource_id': UUID of the resource,
-          'project_id': UUID of project owning the resource,
-          'user_id': UUID of user owning the resource,
-          'timestamp': UTC datetime of last update to the resource,
-          'metadata': most current metadata for the resource,
-          'meter': list of the meters reporting data for the resource,
-          }
+        """Return an iterable of api_models.Resource instances
 
         :param user: Optional ID for user that owns the resource.
         :param project: Optional ID for project that owns the resource.
@@ -245,49 +234,41 @@ class Connection(base.Connection):
         :param metaquery: Optional dict with metadata to match on.
         :param resource: Optional resource filter.
         """
-        query = model_query(Resource, session=self.session)
+        query = self.session.query(Meter,).group_by(Meter.resource_id)
         if user is not None:
-            query = query.filter(Resource.user_id == user)
+            query = query.filter(Meter.user_id == user)
         if source is not None:
-            query = query.filter(Resource.sources.any(id=source))
-        if start_timestamp is not None:
-            query = query.filter(Resource.timestamp >= start_timestamp)
+            query = query.filter(Meter.sources.any(id=source))
+        if start_timestamp:
+            query = query.filter(Meter.timestamp >= start_timestamp)
         if end_timestamp:
-            query = query.filter(Resource.timestamp < end_timestamp)
+            query = query.filter(Meter.timestamp < end_timestamp)
         if project is not None:
-            query = query.filter(Resource.project_id == project)
+            query = query.filter(Meter.project_id == project)
         if resource is not None:
-            query = query.filter(Resource.id == resource)
-        query = query.options(
-            sqlalchemy_session.sqlalchemy.orm.joinedload('meters'))
+            query = query.filter(Meter.resource_id == resource)
         if metaquery:
             raise NotImplementedError('metaquery not implemented')
 
-        for resource in query.all():
-            r = row2dict(resource)
-            # Replace the '_id' key with 'resource_id' to meet the
-            # caller's expectations.
-            r['resource_id'] = r['id']
-            del r['id']
-            # Replace the 'resource_metadata' with 'metadata'
-            r['metadata'] = r['resource_metadata']
-            del r['resource_metadata']
-            # Replace the 'meters' with 'meter'
-            r['meter'] = r['meters']
-            del r['meters']
-            yield r
+        for meter in query.all():
+            yield api_models.Resource(
+                resource_id=meter.resource_id,
+                project_id=meter.project_id,
+                user_id=meter.user_id,
+                metadata=meter.resource_metadata,
+                meter=[
+                    api_models.ResourceMeter(
+                        counter_name=m.counter_name,
+                        counter_type=m.counter_type,
+                        counter_unit=m.counter_unit,
+                    )
+                    for m in meter.resource.meters
+                ],
+            )
 
     def get_meters(self, user=None, project=None, resource=None, source=None,
                    metaquery={}):
-        """Return an iterable of dictionaries containing meter information.
-
-        { 'name': name of the meter,
-          'type': type of the meter (guage, counter),
-          'unit': unit of the meter,
-          'resource_id': UUID of the resource,
-          'project_id': UUID of project owning the resource,
-          'user_id': UUID of user owning the resource,
-          }
+        """Return an iterable of api_models.Meter instances
 
         :param user: Optional ID for user that owns the resource.
         :param project: Optional ID for project that owns the resource.
@@ -295,7 +276,7 @@ class Connection(base.Connection):
         :param source: Optional source filter.
         :param metaquery: Optional dict with metadata to match on.
         """
-        query = model_query(Resource, session=self.session)
+        query = self.session.query(Resource)
         if user is not None:
             query = query.filter(Resource.user_id == user)
         if source is not None:
@@ -315,72 +296,55 @@ class Connection(base.Connection):
                 if meter.counter_name in meter_names:
                     continue
                 meter_names.add(meter.counter_name)
-                m = {}
-                m['resource_id'] = resource.id
-                m['project_id'] = resource.project_id
-                m['user_id'] = resource.user_id
-                m['name'] = meter.counter_name
-                m['type'] = meter.counter_type
-                m['unit'] = meter.counter_unit
-                yield m
+                yield api_models.Meter(
+                    name=meter.counter_name,
+                    type=meter.counter_type,
+                    unit=meter.counter_unit,
+                    resource_id=resource.id,
+                    project_id=resource.project_id,
+                    user_id=resource.user_id,
+                )
 
-    def get_raw_events(self, event_filter):
-        """Return an iterable of raw event data as created by
-        :func:`ceilometer.meter.meter_message_from_counter`.
+    def get_samples(self, sample_filter):
+        """Return an iterable of api_models.Samples
         """
-        query = model_query(Meter, session=self.session)
-        query = make_query_from_filter(query, event_filter,
+        query = self.session.query(Meter)
+        query = make_query_from_filter(query, sample_filter,
                                        require_meter=False)
-        events = query.all()
+        samples = query.all()
 
-        for e in events:
+        for s in samples:
             # Remove the id generated by the database when
-            # the event was inserted. It is an implementation
+            # the sample was inserted. It is an implementation
             # detail that should not leak outside of the driver.
-            e = row2dict(e)
-            del e['id']
-            # Replace 'sources' with 'source' to meet the caller's
-            # expectation, Meter.sources contains one and only one
-            # source in the current implementation.
-            e['source'] = e['sources'][0]['id']
-            del e['sources']
-            yield e
+            yield api_models.Sample(
+                # Replace 'sources' with 'source' to meet the caller's
+                # expectation, Meter.sources contains one and only one
+                # source in the current implementation.
+                source=s.sources[0].id,
+                counter_name=s.counter_name,
+                counter_type=s.counter_type,
+                counter_unit=s.counter_unit,
+                counter_volume=s.counter_volume,
+                user_id=s.user_id,
+                project_id=s.project_id,
+                resource_id=s.resource_id,
+                timestamp=s.timestamp,
+                resource_metadata=s.resource_metadata,
+                message_id=s.message_id,
+                message_signature=s.message_signature,
+            )
 
-    def _make_volume_query(self, event_filter, counter_volume_func):
-        """Returns complex Meter counter_volume query for max and sum"""
-        subq = model_query(Meter.id, session=self.session)
-        subq = make_query_from_filter(subq, event_filter, require_meter=False)
+    def _make_volume_query(self, sample_filter, counter_volume_func):
+        """Returns complex Meter counter_volume query for max and sum."""
+        subq = self.session.query(Meter.id)
+        subq = make_query_from_filter(subq, sample_filter, require_meter=False)
         subq = subq.subquery()
         mainq = self.session.query(Resource.id, counter_volume_func)
         mainq = mainq.join(Meter).group_by(Resource.id)
         return mainq.filter(Meter.id.in_(subq))
 
-    def get_volume_sum(self, event_filter):
-        counter_volume_func = func.sum(Meter.counter_volume)
-        query = self._make_volume_query(event_filter, counter_volume_func)
-        results = query.all()
-        return ({'resource_id': x, 'value': y} for x, y in results)
-
-    def get_volume_max(self, event_filter):
-        counter_volume_func = func.max(Meter.counter_volume)
-        query = self._make_volume_query(event_filter, counter_volume_func)
-        results = query.all()
-        return ({'resource_id': x, 'value': y} for x, y in results)
-
-    def get_event_interval(self, event_filter):
-        """Return the min and max timestamps from events,
-        using the event_filter to limit the events seen.
-
-        ( datetime.datetime(), datetime.datetime() )
-        """
-        query = self.session.query(func.min(Meter.timestamp),
-                                   func.max(Meter.timestamp))
-        query = make_query_from_filter(query, event_filter)
-        results = query.all()
-        a_min, a_max = results[0]
-        return (a_min, a_max)
-
-    def _make_stats_query(self, event_filter):
+    def _make_stats_query(self, sample_filter):
         query = self.session.query(
             func.min(Meter.timestamp).label('tsmin'),
             func.max(Meter.timestamp).label('tsmax'),
@@ -390,91 +354,76 @@ class Connection(base.Connection):
             func.max(Meter.counter_volume).label('max'),
             func.count(Meter.counter_volume).label('count'))
 
-        return make_query_from_filter(query, event_filter)
+        return make_query_from_filter(query, sample_filter)
 
     @staticmethod
-    def _stats_result_to_dict(result, period_start, period_end):
-        return {'count': result.count,
-                'min': result.min,
-                'max': result.max,
-                'avg': result.avg,
-                'sum': result.sum,
-                'duration_start': result.tsmin,
-                'duration_end': result.tsmax,
-                'duration': timeutils.delta_seconds(result.tsmin,
-                                                    result.tsmax),
-                'period': int(timeutils.delta_seconds(period_start,
-                                                      period_end)),
-                'period_start': period_start,
-                'period_end': period_end}
+    def _stats_result_to_model(result, period, period_start, period_end):
+        duration = (timeutils.delta_seconds(result.tsmin, result.tsmax)
+                    if result.tsmin is not None and result.tsmax is not None
+                    else None)
+        return api_models.Statistics(
+            count=int(result.count),
+            min=result.min,
+            max=result.max,
+            avg=result.avg,
+            sum=result.sum,
+            duration_start=result.tsmin,
+            duration_end=result.tsmax,
+            duration=duration,
+            period=period,
+            period_start=period_start,
+            period_end=period_end,
+        )
 
-    def get_meter_statistics(self, event_filter, period=None):
-        """Return a dictionary containing meter statistics.
-        described by the query parameters.
+    def get_meter_statistics(self, sample_filter, period=None):
+        """Return an iterable of api_models.Statistics instances containing
+        meter statistics described by the query parameters.
 
         The filter must have a meter value set.
 
-        { 'min':
-          'max':
-          'avg':
-          'sum':
-          'count':
-          'period':
-          'period_start':
-          'period_end':
-          'duration':
-          'duration_start':
-          'duration_end':
-          }
         """
-
-        res = self._make_stats_query(event_filter).all()[0]
+        if not period or not sample_filter.start or not sample_filter.end:
+            res = self._make_stats_query(sample_filter).all()[0]
 
         if not period:
-            return [self._stats_result_to_dict(res, res.tsmin, res.tsmax)]
+            yield self._stats_result_to_model(res, 0, res.tsmin, res.tsmax)
+            return
 
-        query = self._make_stats_query(event_filter)
+        query = self._make_stats_query(sample_filter)
         # HACK(jd) This is an awful method to compute stats by period, but
         # since we're trying to be SQL agnostic we have to write portable
         # code, so here it is, admire! We're going to do one request to get
         # stats by period. We would like to use GROUP BY, but there's no
         # portable way to manipulate timestamp in SQL, so we can't.
-        results = []
-        for i in range(int(math.ceil(
-                timeutils.delta_seconds(event_filter.start or res.tsmin,
-                                        event_filter.end or res.tsmax)
-                / float(period)))):
-            period_start = (event_filter.start
-                            + datetime.timedelta(seconds=i * period))
-            period_end = period_start + datetime.timedelta(seconds=period)
+        for period_start, period_end in base.iter_period(
+                sample_filter.start or res.tsmin,
+                sample_filter.end or res.tsmax,
+                period):
             q = query.filter(Meter.timestamp >= period_start)
             q = q.filter(Meter.timestamp < period_end)
-            results.append(self._stats_result_to_dict(q.all()[0],
-                                                      period_start,
-                                                      period_end))
-        return results
+            r = q.all()[0]
+            # Don't return results that didn't have any data.
+            if r.count:
+                yield self._stats_result_to_model(
+                    result=r,
+                    period=int(timeutils.delta_seconds(period_start,
+                                                       period_end)),
+                    period_start=period_start,
+                    period_end=period_end,
+                )
 
+    def get_alarms(self, name=None, user=None,
+                   project=None, enabled=True, alarm_id=None):
+        """Yields a lists of alarms that match filters
+        """
+        raise NotImplementedError('Alarms not implemented')
 
-def model_query(*args, **kwargs):
-    """Query helper
+    def update_alarm(self, alarm):
+        """update alarm
+        """
+        raise NotImplementedError('Alarms not implemented')
 
-    :param session: if present, the session to use
-    """
-    session = kwargs.get('session') or sqlalchemy_session.get_session()
-    query = session.query(*args)
-    return query
-
-
-def row2dict(row, srcflag=None):
-    """Convert User, Project, Meter, Resource instance to dictionary object
-       with nested Source(s) and Meter(s)
-    """
-    d = copy.copy(row.__dict__)
-    for col in ['_sa_instance_state', 'sources']:
-        if col in d:
-            del d[col]
-    if not srcflag:
-        d['sources'] = map(lambda x: row2dict(x, True), row.sources)
-        if d.get('meters') is not None:
-            d['meters'] = map(lambda x: row2dict(x, True), d['meters'])
-    return d
+    def delete_alarm(self, alarm_id):
+        """Delete a alarm
+        """
+        raise NotImplementedError('Alarms not implemented')

@@ -19,14 +19,11 @@
 """
 
 import abc
-from collections import namedtuple
-
-# Import rpc_notifier to register notification_topics flag so that
-# plugins can use it
-import ceilometer.openstack.common.notifier.rpc_notifier
+import collections
 
 
-ExchangeTopics = namedtuple('ExchangeTopics', ['exchange', 'topics'])
+ExchangeTopics = collections.namedtuple('ExchangeTopics',
+                                        ['exchange', 'topics'])
 
 
 class PluginBase(object):
@@ -89,47 +86,3 @@ class PollsterBase(PluginBase):
     def get_counters(self, manager, instance):
         """Return a sequence of Counter instances from polling the
         resources."""
-
-
-class PublisherBase(PluginBase):
-    """Base class for plugins that publish the sampler."""
-
-    __metaclass__ = abc.ABCMeta
-
-    @abc.abstractmethod
-    def publish_counters(self, context, counters, source):
-        "Publish counters into final conduit."
-
-
-class TransformerBase(PluginBase):
-    """Base class for plugins that transform the counter."""
-
-    __metaclass__ = abc.ABCMeta
-
-    @abc.abstractmethod
-    def handle_sample(self, context, counter, source):
-        """Transform a counter.
-
-        :param context: Passed from the data collector.
-        :param counter: A counter.
-        :param source: Passed from data collector.
-        """
-
-    def flush(self, context, source):
-        """Flush counters cached previously.
-
-        :param context: Passed from the data collector.
-        :param source: Source of counters that are being published."""
-        return []
-
-    def __init__(self, **kwargs):
-        """Setup transformer.
-
-        Each time a transformed is involved in a pipeline, a new transformer
-        instance is created and chained into the pipeline. i.e. transformer
-        instance is per pipeline. This helps if transformer need keep some
-        cache and per-pipeline information.
-
-        :param kwargs: The parameters that are defined in pipeline config file.
-        """
-        super(TransformerBase, self).__init__()

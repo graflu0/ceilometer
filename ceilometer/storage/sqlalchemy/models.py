@@ -15,16 +15,16 @@
 # under the License.
 
 """
-SQLAlchemy models for nova data.
+SQLAlchemy models for Ceilometer data.
 """
 
 import json
-from urlparse import urlparse
+import urlparse
 
 from oslo.config import cfg
-from sqlalchemy import Column, Integer, String, Table
+from sqlalchemy import Column, Integer, String, Table, ForeignKey, DateTime, \
+    Float
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import TypeDecorator, VARCHAR
 
@@ -40,7 +40,7 @@ cfg.CONF.register_opts(sql_opts)
 
 
 def table_args():
-    engine_name = urlparse(cfg.CONF.database_connection).scheme
+    engine_name = urlparse.urlparse(cfg.CONF.database_connection).scheme
     if engine_name == 'mysql':
         return {'mysql_engine': cfg.CONF.mysql_engine,
                 'mysql_charset': "utf8"}
@@ -97,7 +97,7 @@ class Source(Base):
 
 
 class Meter(Base):
-    """Metering data"""
+    """Metering data."""
 
     __tablename__ = 'meter'
     id = Column(Integer, primary_key=True)
@@ -109,7 +109,7 @@ class Meter(Base):
     resource_metadata = Column(JSONEncodedDict)
     counter_type = Column(String(255))
     counter_unit = Column(String(255))
-    counter_volume = Column(Integer)
+    counter_volume = Column(Float(53))
     timestamp = Column(DateTime, default=timeutils.utcnow)
     message_signature = Column(String)
     message_id = Column(String)
@@ -135,9 +135,7 @@ class Resource(Base):
     __tablename__ = 'resource'
     id = Column(String(255), primary_key=True)
     sources = relationship("Source", secondary=lambda: sourceassoc)
-    timestamp = Column(DateTime)
     resource_metadata = Column(JSONEncodedDict)
-    received_timestamp = Column(DateTime, default=timeutils.utcnow)
     user_id = Column(String(255), ForeignKey('user.id'))
     project_id = Column(String(255), ForeignKey('project.id'))
     meters = relationship("Meter", backref='resource')

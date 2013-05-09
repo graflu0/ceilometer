@@ -18,31 +18,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+"""
+Ceilometer Middleware for Swift Proxy
+
+Configuration:
+
+In /etc/swift/proxy-server.conf on the main pipeline add "ceilometer" just
+before "proxy-server" and add the following filter in the file:
+
+[filter:ceilometer]
+use = egg:ceilometer#swift
+
+# Some optional configuration
+# this allow to publish additional metadata
+metadata_headers = X-TEST
+"""
+
 from __future__ import absolute_import
 
 from oslo.config import cfg
-from stevedore import dispatch
+from swift.common.utils import split_path
+import webob
+
+REQUEST = webob
+try:
+    # Swift >= 1.7.5
+    import swift.common.swob
+    REQUEST = swift.common.swob
+except ImportError:
+    pass
+
+try:
+    # Swift > 1.7.5 ... module exists but doesn't contain class.
+    from swift.common.utils import InputProxy
+except ImportError:
+    # Swift <= 1.7.5 ... module exists and has class.
+    from swift.common.middleware.proxy_logging import InputProxy
 
 from ceilometer import counter
 from ceilometer.openstack.common import context
 from ceilometer.openstack.common import timeutils
 from ceilometer import pipeline
+from ceilometer import publisher
 from ceilometer import service
-
-from swift.common.utils import split_path
-
-try:
-    # Swift >= 1.7.5
-    from swift.common.swob import Request
-except ImportError:
-    from webob import Request
-
-try:
-    # Swift > 1.7.5
-    from swift.common.utils import InputProxy
-except ImportError:
-    # Swift <= 1.7.5
-    from swift.common.middleware.proxy_logging import InputProxy
+from ceilometer import transformer
 
 
 class CeilometerMiddleware(object):
@@ -52,14 +72,22 @@ class CeilometerMiddleware(object):
 
     def __init__(self, app, conf):
         self.app = app
-        service.prepare_service()
-        publisher_manager = dispatch.NameDispatchExtensionManager(
-            namespace=pipeline.PUBLISHER_NAMESPACE,
-            check_func=lambda x: True,
-            invoke_on_load=True,
-        )
 
-        self.pipeline_manager = pipeline.setup_pipeline(publisher_manager)
+        self.metadata_headers = [h.strip().replace('-', '_').lower()
+                                 for h in conf.get(
+                                     "metadata_headers",
+                                     "").split(",") if h.strip()]
+
+        service.prepare_service()
+
+        self.pipeline_manager = pipeline.setup_pipeline(
+            transformer.TransformerExtensionManager(
+                'ceilometer.transformer',
+            ),
+            publisher.PublisherExtensionManager(
+                'ceilometer.publisher',
+            ),
+        )
 
     def __call__(self, env, start_response):
         start_response_args = [None]
@@ -92,9 +120,22 @@ class CeilometerMiddleware(object):
             return iter_response(iterable)
 
     def publish_counter(self, env, bytes_received, bytes_sent):
-        req = Request(env)
+        req = REQUEST.Request(env)
         version, account, container, obj = split_path(req.path, 1, 4, True)
         now = timeutils.utcnow().isoformat()
+
+        resource_metadata = {
+            "path": req.path,
+            "version": version,
+            "container": container,
+            "object": obj,
+        }
+
+        for header in self.metadata_headers:
+            if header.upper() in req.headers:
+                resource_metadata['http_header_%s' % header] = req.headers.get(
+                    header.upper())
+
         with pipeline.PublishContext(
                 context.get_admin_context(),
                 cfg.CONF.counter_source,
@@ -103,36 +144,40 @@ class CeilometerMiddleware(object):
             if bytes_received:
                 publisher([counter.Counter(
                     name='storage.objects.incoming.bytes',
-                    type='delta',
+                    type=counter.TYPE_DELTA,
                     unit='B',
                     volume=bytes_received,
                     user_id=env.get('HTTP_X_USER_ID'),
                     project_id=env.get('HTTP_X_TENANT_ID'),
                     resource_id=account.partition('AUTH_')[2],
                     timestamp=now,
-                    resource_metadata={
-                        "path": req.path,
-                        "version": version,
-                        "container": container,
-                        "object": obj,
-                    })])
+                    resource_metadata=resource_metadata)])
 
             if bytes_sent:
                 publisher([counter.Counter(
                     name='storage.objects.outgoing.bytes',
-                    type='delta',
+                    type=counter.TYPE_DELTA,
                     unit='B',
                     volume=bytes_sent,
                     user_id=env.get('HTTP_X_USER_ID'),
                     project_id=env.get('HTTP_X_TENANT_ID'),
                     resource_id=account.partition('AUTH_')[2],
                     timestamp=now,
-                    resource_metadata={
-                        "path": req.path,
-                        "version": version,
-                        "container": container,
-                        "object": obj,
-                    })])
+                    resource_metadata=resource_metadata)])
+
+            # publish the event for each request
+            # request method will be recorded in the metadata
+            resource_metadata['method'] = req.method.lower()
+            publisher([counter.Counter(
+                name='storage.api.request',
+                type=counter.TYPE_DELTA,
+                unit='request',
+                volume=1,
+                user_id=env.get('HTTP_X_USER_ID'),
+                project_id=env.get('HTTP_X_TENANT_ID'),
+                resource_id=account.partition('AUTH_')[2],
+                timestamp=now,
+                resource_metadata=resource_metadata)])
 
 
 def filter_factory(global_conf, **local_conf):

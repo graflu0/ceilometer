@@ -15,6 +15,7 @@ ceilometer/versioninfo
 doc/source/api/ceilometer.*.rst
 doc/source/api/tests.*.rst
 doc/source/api/autoindex.rst
+doc/source/sourcecode
 *.mo
 /.idea
 /Source - Ceilometer.iml
