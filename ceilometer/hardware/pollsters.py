@@ -31,7 +31,6 @@ LOG = log.getLogger(__name__)
 #TODO: überprüfen ob Disk & Memory Angaben korrekt vom SNMP-Inspector zurückgegeben werden
 
 def make_counter_from_host(host, name, type, unit, volume, res_metadata=None):
-    #TODO: Replace user_id and Project_id with real ids
     resource_metadata = dict()
     if(res_metadata is not None):
         metadata = copy.copy(res_metadata)
@@ -43,8 +42,8 @@ def make_counter_from_host(host, name, type, unit, volume, res_metadata=None):
         type=type,
         unit=unit,
         volume=volume,
-        user_id='hardware_stuff',
-        project_id='hardware_project_tenant_id',
+        user_id=None,
+        project_id=None,
         resource_id=host.id,
         timestamp=timeutils.isotime(),
         resource_metadata=resource_metadata,

@@ -49,9 +49,11 @@ cfg.CONF.register_opts(OPTS)
 class InspectorManager(object):
 
     def __init__(self):
+
         if cfg.CONF.hardware_inspector_configurations is not None :
             global_conf = json.loads(cfg.CONF.hardware_inspector_configurations)
         else:
+            #TODO: What if global_conf = None --> no hosts defined
             global_conf = None
 
         self._inspectors = {}
