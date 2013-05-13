@@ -106,8 +106,8 @@ class SNMPInspector(hardware_inspector.Inspector):
         #get 15 minute load
         cpu_15_min_load_ind = self._get_value_from_oid(self._cpu_15_min_load_oid, host)
 
-        return hardware_inspector.CPUStats(cpu1MinLoad=str(cpu_1_min_load_ind), cpu5MinLoad=str(cpu_5_min_load_ind),
-                        cpu15MinLoad=str(cpu_15_min_load_ind))
+        return hardware_inspector.CPUStats(cpu1MinLoad=float(str(cpu_1_min_load_ind)), cpu5MinLoad=float(str(cpu_5_min_load_ind)),
+                        cpu15MinLoad=float(str(cpu_15_min_load_ind)))
 
     def inspect_memoryspace(self, host):
         #get total memory
@@ -116,7 +116,7 @@ class SNMPInspector(hardware_inspector.Inspector):
         #get used memory
         used = self._get_value_from_oid(self._memory_used_oid, host)
 
-        return hardware_inspector.MemoryStats(total=total, used=used)
+        return hardware_inspector.MemoryStats(total=int(total), used=int(used))
 
     def inspect_diskspace(self, host):
         disks = self._walk_oid(self._disk_index_oid, host)
@@ -129,8 +129,8 @@ class SNMPInspector(hardware_inspector.Inspector):
                 size = self._get_value_from_oid(self._disk_size_oid + "." + str(value), host)
                 used = self._get_value_from_oid(self._disk_used_oid + "." + str(value), host)
 
-                disk = hardware_inspector.Disk(device=device, path=path)
-                stats = hardware_inspector.DiskStats(size=size,used=used)
+                disk = hardware_inspector.Disk(device=str(device), path=str(path))
+                stats = hardware_inspector.DiskStats(size=int(size),used=int(used))
 
                 yield (disk, stats)
 
@@ -150,8 +150,8 @@ class SNMPInspector(hardware_inspector.Inspector):
                     error = self._get_value_from_oid(self._interface_error_oid + "." + str(value), host)
 
                     interface = hardware_inspector.Interface(name=str(name),mac=mac.prettyPrint().replace('0x', ''), ip=str(ip))
-                    stats = hardware_inspector.InterfaceStats(bandwidth=str(bandwidth),rx_bytes=str(rx_bytes),
-                                                              tx_bytes=str(tx_bytes),error=str(error))
+                    stats = hardware_inspector.InterfaceStats(bandwidth=int(bandwidth),rx_bytes=int(rx_bytes),
+                                                              tx_bytes=int(tx_bytes),error=int(error))
 
                     yield (interface, stats)
 
