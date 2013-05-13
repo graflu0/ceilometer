@@ -48,8 +48,7 @@ Disk = collections.namedtuple('Disk', ['device', 'path'])
 # size: storage size (kBytes)
 # used: storage used
 #
-DiskStats = collections.namedtuple('DiskStats',
-    ['size', 'used'])
+DiskStats = collections.namedtuple('DiskStats', ['size', 'used'])
 
 
 # Named tuple representing an interface.
