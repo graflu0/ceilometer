@@ -16,7 +16,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-"""DESCRIPTION""" #TODO: DESCRIPTION
+"""Manage the inspectors and calls them"""
 
 from oslo.config import cfg
 from stevedore import driver
@@ -59,9 +59,6 @@ class InspectorManager(object):
         self._inspectors = {}
         #TODO add entry for inspectors
         self._inspectors[cfg.CONF.snmp_inspector] = self._get_inspector(cfg.CONF.snmp_inspector, global_conf)
-
-        for key in self._inspectors:
-            print key
 
     def inspect_cpu(self, host):
         for key in self._inspectors:

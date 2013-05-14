@@ -189,7 +189,7 @@ class DiskSpacePollster(plugin.HardwarePollster):
 
             yield make_counter_from_host(host,
                 name='disk.size.total',
-                type=counter.TYPE_CUMULATIVE,
+                type=counter.TYPE_GAUGE,
                 unit='B',
                 volume=info.size,
                 res_metadata=disk
@@ -197,7 +197,7 @@ class DiskSpacePollster(plugin.HardwarePollster):
 
             yield make_counter_from_host(host,
                 name='disk.size.used',
-                type=counter.TYPE_CUMULATIVE,
+                type=counter.TYPE_GAUGE,
                 unit='B',
                 volume=info.used,
                 res_metadata=disk
@@ -232,13 +232,13 @@ class MemorySpacePollster(plugin.HardwarePollster):
             memoryinfo = manager.inspector_manager.inspect_memoryspace(host)
             yield make_counter_from_host(host,
                 name='memory.size.total',
-                type=counter.TYPE_CUMULATIVE,
+                type=counter.TYPE_GAUGE,
                 unit='B',
                 volume=memoryinfo.total
             )
             yield make_counter_from_host(host,
                 name='memory.size.used',
-                type=counter.TYPE_CUMULATIVE,
+                type=counter.TYPE_GAUGE,
                 unit='B',
                 volume=memoryinfo.used
             )

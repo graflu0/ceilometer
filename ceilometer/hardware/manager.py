@@ -52,12 +52,7 @@ class PollingTask(agent.PollingTask):
                     try:
                         LOG.info("Polling pollster %s", pollster.name)
                         if not pollster.name in host.disabled_pollsters:
-                            #TODO get data from hosts
-                            print host.ip_address +" " +pollster.name
-                            print list(pollster.obj.get_counters(
-                                self.manager,
-                                host))
-                            #publisher(list(pollster.obj.get_counters(self.manager, host)))
+                            publisher(list(pollster.obj.get_counters(self.manager, host)))
 
                     except Exception as err:
                         LOG.warning('Continue after error from %s: %s',

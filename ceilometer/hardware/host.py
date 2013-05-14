@@ -16,7 +16,7 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-"""DESCRIPTION""" #TODO: DESCRIPTION
+"""Represents a physical device"""
 
 import re
 from subprocess import Popen, PIPE
@@ -48,9 +48,7 @@ def get_metadata_from_object(host):
         'host_name' : host.name,
         'host_mac_address' : host.id
         }
-#    print metadata
-#    for name in INSTANCE_PROPERTIES:
-#        metadata[name] = getattr(host, name, u'')
+
     return metadata
 
 
