@@ -49,6 +49,15 @@ class TestLocationMetadata(unittest.TestCase):
         self.manager = manager.AgentManager()
         super(TestLocationMetadata, self).setUp()
 
+        print "------------------------------------"
+
+        print "TestDiskSpacePollster"
+
+        print "------------------------------------"
+
+        while True :
+            pass
+
         # Mimics an instance returned from nova api call
         self.INSTANCE_PROPERTIES = {'name': 'display name',
                                     'OS-EXT-SRV-ATTR:instance_name':

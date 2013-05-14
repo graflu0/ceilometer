@@ -57,8 +57,7 @@ class PollingTask(agent.PollingTask):
                             print list(pollster.obj.get_counters(
                                 self.manager,
                                 host))
-                            publisher(list(pollster.obj.get_counters(self.manager, host)))
-                            print host.ip_address +" " +pollster.name
+                            #publisher(list(pollster.obj.get_counters(self.manager, host)))
 
                     except Exception as err:
                         LOG.warning('Continue after error from %s: %s',
