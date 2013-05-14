@@ -48,9 +48,7 @@ def get_metadata_from_object(host):
         'host_name' : host.name,
         'host_mac_address' : host.id
         }
-#    print metadata
-#    for name in INSTANCE_PROPERTIES:
-#        metadata[name] = getattr(host, name, u'')
+
     return metadata
 
 

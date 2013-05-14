@@ -60,9 +60,6 @@ class InspectorManager(object):
         #TODO add entry for inspectors
         self._inspectors[cfg.CONF.snmp_inspector] = self._get_inspector(cfg.CONF.snmp_inspector, global_conf)
 
-        for key in self._inspectors:
-            print key
-
     def inspect_cpu(self, host):
         for key in self._inspectors:
             if key not in cfg.CONF.disabled_hardware_inspectors:
