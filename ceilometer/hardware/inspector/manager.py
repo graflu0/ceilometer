@@ -22,7 +22,7 @@ from oslo.config import cfg
 from stevedore import driver
 
 from ceilometer.openstack.common import log
-from ceilometer.hardware.inspector.snmp import inspector as snmp_inspector
+from ceilometer import extension_manager
 from ceilometer.hardware.inspector import inspector as inspector_interface
 import json
 
@@ -38,10 +38,6 @@ OPTS = [
     cfg.StrOpt('hardware_inspector_configurations',
         default=None,
         help='dictionary of global hardware inspector configurations'),
-    cfg.StrOpt('snmp_inspector',
-        default='snmp',
-        help='Inspector to use for inspecting hw with snmp')
-    #TODO add options here for new inspectors
     ]
 
 cfg.CONF.register_opts(OPTS)
@@ -55,42 +51,40 @@ class InspectorManager(object):
         else:
             #TODO: What if global_conf = None --> no hosts defined
             global_conf = None
-
         self._inspectors = {}
-        #TODO add entry for inspectors
-        self._inspectors[cfg.CONF.snmp_inspector] = self._get_inspector(cfg.CONF.snmp_inspector, global_conf)
+        for name in list(extension_manager.ActivatedExtensionManager(
+                        namespace='ceilometer.hardware.inspectors',
+                        disabled_names=cfg.CONF.disabled_hardware_inspectors,).names()):
+            self._inspectors[name] = self._get_inspector(name, global_conf)
 
     def inspect_cpu(self, host):
         for key in self._inspectors:
-            if key not in cfg.CONF.disabled_hardware_inspectors:
-                try:
-                    return self._inspectors[cfg.CONF.snmp_inspector].inspect_cpu(host)
-                except NotImplementedError:
-                    LOG.error("inspect_cpu not implemented in " + key + "inspector")
+            try:
+                return self._inspectors[key].inspect_cpu(host)
+            except NotImplementedError:
+                LOG.error("inspect_cpu not implemented in " + key + "inspector")
 
     def inspect_nics(self, host):
         for key in self._inspectors:
-            if key not in cfg.CONF.disabled_hardware_inspectors:
-                try:
-                    return self._inspectors[cfg.CONF.snmp_inspector].inspect_network(host)
-                except NotImplementedError:
-                    LOG.error("inspect_cpu not implemented in " + key + " inspector")
+            try:
+                return self._inspectors[key].inspect_network(host)
+            except NotImplementedError:
+                LOG.error("inspect_cpu not implemented in " + key + " inspector")
 
     def inspect_diskspace(self, host):
         for key in self._inspectors:
-            if key not in cfg.CONF.disabled_hardware_inspectors:
-                try:
-                    return self._inspectors[cfg.CONF.snmp_inspector].inspect_diskspace(host)
-                except NotImplementedError:
-                    LOG.error("inspect_cpu not implemented in " + key + " inspector")
+            try:
+                return self._inspectors[key].inspect_diskspace(host)
+            except NotImplementedError:
+                LOG.error("inspect_cpu not implemented in " + key + " inspector")
+
 
     def inspect_memoryspace(self, host):
         for key in self._inspectors:
-            if key not in cfg.CONF.disabled_hardware_inspectors:
-                try:
-                    return self._inspectors[cfg.CONF.snmp_inspector].inspect_memoryspace(host)
-                except NotImplementedError:
-                    LOG.error("inspect_cpu not implemented in " + key + " inspector")
+            try:
+                return self._inspectors[key].inspect_memoryspace(host)
+            except NotImplementedError:
+                LOG.error("inspect_cpu not implemented in " + key + " inspector")
 
     def _get_inspector(self, inspector_type, global_conf):
         try:

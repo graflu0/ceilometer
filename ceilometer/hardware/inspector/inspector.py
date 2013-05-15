@@ -19,6 +19,7 @@
 """Inspector abstraction for read-only access to hardware components"""
 
 import collections
+from ceilometer.plugin import PluginBase
 
 # Named tuple representing CPU statistics.
 #
@@ -75,7 +76,7 @@ class InspectorException(Exception):
         super(InspectorException, self).__init__(message)
 
 #TODO: update comments
-class Inspector(object):
+class Inspector(PluginBase):
 
     def inspect_cpu(self, host):
         """
