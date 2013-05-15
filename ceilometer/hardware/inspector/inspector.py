@@ -32,22 +32,22 @@ CPUStats = collections.namedtuple('CPUStats', ['cpu1MinLoad', 'cpu5MinLoad', 'cp
 
 # Named tuple representing RAM statistics.
 #
-# total: Total Memory
-# used: Used Memory
-# free: Free Memory
+# total: Total Memory (bytes)
+# used: Used Memory (bytes)
 #
 MemoryStats = collections.namedtuple('MemoryStats', ['total', 'used'])
 
 # Named tuple representing disks.
 #
 # device: the device name for the disk
+# path: the path from the disk
 #
 Disk = collections.namedtuple('Disk', ['device', 'path'])
 
 # Named tuple representing disk statistics.
 #
-# size: storage size (kBytes)
-# used: storage used
+# size: storage size (bytes)
+# used: storage used (bytes)
 #
 DiskStats = collections.namedtuple('DiskStats', ['size', 'used'])
 
@@ -55,7 +55,8 @@ DiskStats = collections.namedtuple('DiskStats', ['size', 'used'])
 # Named tuple representing an interface.
 #
 # name: the name of the interface
-# mac: the MAC address
+# mac: the MAC of the interface
+#ip: the IP of the interface
 #
 Interface = collections.namedtuple('Interface', ['name', 'mac', 'ip'])
 
@@ -64,8 +65,8 @@ Interface = collections.namedtuple('Interface', ['name', 'mac', 'ip'])
 #
 # name: name of the network interface
 # bandwidth: current bandwidth (bytes/s)
-# received: total number of octets received
-# transmitted: total number of octets transmitted
+# received: total number of octets received (bytes)
+# transmitted: total number of octets transmitted (bytes)
 # error: number of outbound packets that could not be transmitted because of errors
 #
 InterfaceStats = collections.namedtuple('InterfaceStats',
@@ -75,7 +76,6 @@ class InspectorException(Exception):
     def __init__(self, message=None):
         super(InspectorException, self).__init__(message)
 
-#TODO: update comments
 class Inspector(PluginBase):
 
     def inspect_cpu(self, host):
@@ -110,7 +110,7 @@ class Inspector(PluginBase):
         Inspect the network interfaces for a host.
 
         :param : the target host
-        :return: for each interface, the number of bytes received and transmitted and errors
+        :return: for each interface, the number of bytes received, transmitted and errors
         """
         raise NotImplementedError()
         

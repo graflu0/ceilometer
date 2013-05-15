@@ -56,26 +56,25 @@ class HardwareHost(object):
 
     def __init__(self, ip_address, opts):
         self._ip_address = ip_address
-        #TODO: improve getting mac & name
-        self._mac_address="000000ffffff"
-        self._name="rechner@zhaw.ch"
-#        try:
-#            self._mac_address = self._get_mac_of_ip(ip_address)
-#        except InstanceNotReachableException as exception:
-#            LOG.warning("Instance with IP " +ip_address +" was not reachable")
-#            LOG.exception(exception)
 
-#        #TODO: exception handling
-#        try:
-#            self._name=self._get_name_from_ip(ip_address)
-#        except Exception:
-#            pass
+        try:
+            self._mac_address = self._get_mac_of_ip(ip_address)
+        except InstanceNotReachableException as exception:
+            LOG.warning("Instance with IP " +ip_address +" was not reachable")
+            LOG.exception(exception)
+
+        try:
+            self._name=self._get_name_from_ip(ip_address)
+        except socket.herror as e:
+            print e
+            self._name=""
 
         self._set_configurations(opts)
 
 
     def _get_mac_of_ip(self, ip):
         if (ip.lower() != "localhost") and not(ip.startswith("127.")):
+            print os.name
             if (os.name == "posix"):
                 try:
                     process = Popen(["ping", "-c","4", ip], stdout=PIPE)
@@ -97,7 +96,7 @@ class HardwareHost(object):
         return mac
 
     def _get_name_from_ip(self, ip):
-       return socket.gethostbyaddr(ip)[0]
+        return socket.gethostbyaddr(ip)[0]
 
     def _set_configurations(self, opts):
         if  opts.get("disabled_pollsters") != None:
@@ -105,7 +104,6 @@ class HardwareHost(object):
         else :
             self._disabled_pollsters = []
 
-        #TODO Implement inspectorlist & config
         if opts.get("disabled_inspectors") != None:
             self._disabled_inspectors = opts.get("disabled_inspectors")
         else:
@@ -134,7 +132,7 @@ class HardwareHost(object):
 
     @property
     def disabled_inspectors(self):
-        return self.disabled_inspectors
+        return self._disabled_inspectors
 
     @property
     def inspector_configurations(self):

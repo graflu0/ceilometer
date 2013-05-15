@@ -59,21 +59,24 @@ class InspectorManager(object):
     def inspect_cpu(self, host):
         for key in self._inspectors:
             try:
-                return self._inspectors[key].inspect_cpu(host)
+                if key not in host.disabled_inspectors:
+                    return self._inspectors[key].inspect_cpu(host)
             except NotImplementedError:
                 LOG.error("inspect_cpu not implemented in " + key + "inspector")
 
     def inspect_nics(self, host):
         for key in self._inspectors:
             try:
-                return self._inspectors[key].inspect_network(host)
+                if key not in host.disabled_inspectors:
+                    return self._inspectors[key].inspect_network(host)
             except NotImplementedError:
                 LOG.error("inspect_cpu not implemented in " + key + " inspector")
 
     def inspect_diskspace(self, host):
         for key in self._inspectors:
             try:
-                return self._inspectors[key].inspect_diskspace(host)
+                if key not in host.disabled_inspectors:
+                    return self._inspectors[key].inspect_diskspace(host)
             except NotImplementedError:
                 LOG.error("inspect_cpu not implemented in " + key + " inspector")
 
@@ -81,7 +84,8 @@ class InspectorManager(object):
     def inspect_memoryspace(self, host):
         for key in self._inspectors:
             try:
-                return self._inspectors[key].inspect_memoryspace(host)
+                if key not in host.disabled_inspectors:
+                    return self._inspectors[key].inspect_memoryspace(host)
             except NotImplementedError:
                 LOG.error("inspect_cpu not implemented in " + key + " inspector")
 
