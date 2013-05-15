@@ -49,7 +49,6 @@ class InspectorManager(object):
         if cfg.CONF.hardware_inspector_configurations is not None :
             global_conf = json.loads(cfg.CONF.hardware_inspector_configurations)
         else:
-            #TODO: What if global_conf = None --> no hosts defined
             global_conf = {}
         self._inspectors = {}
         for name in list(extension_manager.ActivatedExtensionManager(
@@ -97,7 +96,6 @@ class InspectorManager(object):
             return inspector
         except ImportError as e:
             LOG.error("Unable to load the hypervisor inspector: %s" % (e))
-            #TODO set configuration
             generic_inspector = inspector_interface.Inspector()
             if(global_conf):
                 generic_inspector.set_config(global_conf)
