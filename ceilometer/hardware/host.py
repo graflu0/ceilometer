@@ -74,7 +74,6 @@ class HardwareHost(object):
 
     def _get_mac_of_ip(self, ip):
         if (ip.lower() != "localhost") and not(ip.startswith("127.")):
-            print os.name
             if (os.name == "posix"):
                 try:
                     process = Popen(["ping", "-c","4", ip], stdout=PIPE)
