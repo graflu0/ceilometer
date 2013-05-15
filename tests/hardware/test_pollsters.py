@@ -23,8 +23,9 @@
 import mock
 import time
 
-from ceilometer.compute import pollsters
-from ceilometer.compute import manager
+from ceilometer.hardware import pollsters
+from ceilometer.hardware import manager
+from ceilometer.hardware.inspector import manager as hardware_manager
 from ceilometer.hardware.inspector import inspector as hardware_inspector
 from ceilometer.tests import base as test_base
 
@@ -33,7 +34,10 @@ class TestPollsterBase(test_base.TestCase):
     #TODO: correct setUp
     def setUp(self):
         super(TestPollsterBase, self).setUp()
-        self.inspector_manager = self.mox.CreateMock(hardware_inspector.Inspector)
+
+        self.inspector_manager = self.mox.CreateMock(hardware_manager.InspectorManager)
+        self.mox.StubOutWithMock(hardware_manager, 'InspectorManager')
+        hardware_manager.InspectorManager().AndReturn (self.inspector_manager)
         self.host = mock.MagicMock()
         self.host.id = "001122334455"
         self.host.ip_address = "127.0.0.1"
@@ -62,29 +66,17 @@ class TestDiskSpacePollster(TestPollsterBase):
         counters = list(pollster.get_counters(mgr, self.host))
         assert counters
 
-        self.assertEquals(1,1)
-#
-#        print "------------------------------------"
-#
-#        print "TestDiskSpacePollster"
-#
-#        print "------------------------------------"
-#
-#
-#
-#        self.assertEqual(set([c.name for c in counters]),
-#                         set(pollster.get_counter_names()))
-#
-#        def _verify_disk_metering(name, expected_volume):
-#            match = [c for c in counters if c.name == name]
-#            self.assertEquals(len(match), 1, 'missing counter %s' % name)
-#            self.assertEquals(match[0].volume, expected_volume)
-#            self.assertEquals(match[0].type, 'cumulative')
-#
-#        _verify_disk_metering('disk.read.requests', 2L)
-#        _verify_disk_metering('disk.read.bytes', 1L)
-#        _verify_disk_metering('disk.write.requests', 4L)
-#        _verify_disk_metering('disk.write.bytes', 3L)
+        self.assertEqual(set([c.name for c in counters]),
+                         set(pollster.get_counter_names()))
+
+        def _verify_disk_metering(name, expected_volume):
+            match = [c for c in counters if c.name == name]
+            self.assertEquals(len(match), 1, 'missing counter %s' % name)
+            self.assertEquals(match[0].volume, expected_volume)
+            self.assertEquals(match[0].type, 'gauge')
+
+        _verify_disk_metering('disk.size.total', 10000)
+        _verify_disk_metering('disk.size.used', 9000)
 
 
 class TestNetPollster(TestPollsterBase):
@@ -94,6 +86,10 @@ class TestNetPollster(TestPollsterBase):
 
     @mock.patch('ceilometer.pipeline.setup_pipeline', mock.MagicMock())
     def test_get_counters(self):
+        self.mox.ReplayAll()
+
+
+        mgr = manager.AgentManager()
         self.assertEquals(1,1)
 #        vnic0 = virt_inspector.Interface(
 #            name='vnet0',
@@ -151,6 +147,10 @@ class TestCPUPollster(TestPollsterBase):
 
     @mock.patch('ceilometer.pipeline.setup_pipeline', mock.MagicMock())
     def test_get_counters(self):
+        self.mox.ReplayAll()
+
+
+        mgr = manager.AgentManager()
         self.assertEquals(1,1)
 #        self.inspector.inspect_cpu(self.instance.name).AndReturn(
 #            virt_inspector.CPUStats(time=1 * (10 ** 6), number=2))
@@ -181,7 +181,7 @@ class TestCPUPollster(TestPollsterBase):
 #        _verify_cpu_metering(False, 3 * (10 ** 6))
 #        _verify_cpu_metering(False, 2 * (10 ** 6))
 
-class TestMemorySpacePollster(TestPollsterBase):
+"""class TestMemorySpacePollster(TestPollsterBase):
     def test_get_counters(self):
-        self.assertEquals(1,1)
+        self.assertEquals(1,1)"""
 
