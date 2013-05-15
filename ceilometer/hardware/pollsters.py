@@ -28,7 +28,6 @@ from ceilometer.openstack.common import log
 from ceilometer.openstack.common import timeutils
 
 LOG = log.getLogger(__name__)
-#TODO: überprüfen ob Disk & Memory Angaben korrekt vom SNMP-Inspector zurückgegeben werden
 
 def make_counter_from_host(host, name, type, unit, volume, res_metadata=None):
     resource_metadata = dict()
@@ -94,7 +93,10 @@ class CPUPollster(plugin.HardwarePollster):
                 unit='%',
                 volume=cpu_util_15_min,
             )
-
+        except TypeError as err:
+            self.LOG.warning('None pollster for CPU time of %s with id %s: %s',
+                host.ip_address, host.id, err)
+            self.LOG.exception(err)
         except Exception as err:
             self.LOG.error('could not get CPU time for %s with id %s: %s',
                 host.ip_address, host.id, err)
@@ -150,6 +152,10 @@ class NetPollster(plugin.HardwarePollster):
                     volume=info.error,
                     res_metadata=nic,
                 )
+        except TypeError as err:
+            self.LOG.warning('None pollster for network stats of %s with id %s: %s',
+                host.ip_address, host.id, err)
+            self.LOG.exception(err)
         except Exception as err:
             self.LOG.warning('could not get network stats for %s with id %s: %s',
                 host.ip_address, host.id, err)
@@ -196,11 +202,15 @@ class DiskSpacePollster(plugin.HardwarePollster):
                 volume=info.used,
                 res_metadata=disk
             )
-
+        except TypeError as err:
+            self.LOG.warning('None pollster for disk usage of %s with id %s: %s',
+                host.ip_address, host.id, err)
+            self.LOG.exception(err)
         except Exception as err:
             self.LOG.warning('could not get disk usage for %s with id %s: %s',
                 host.ip_address, host.id, err)
             self.LOG.exception(err)
+
 
 class MemorySpacePollster(plugin.HardwarePollster):
     LOG = log.getLogger(__name__ + '.memoryspace')
@@ -232,6 +242,10 @@ class MemorySpacePollster(plugin.HardwarePollster):
                 unit='B',
                 volume=memoryinfo.used
             )
+        except TypeError as err:
+            self.LOG.warning('None pollster for memory usage of %s with id %s: %s',
+                host.ip_address, host.id, err)
+            self.LOG.exception(err)
         except Exception as err:
             self.LOG.warning('could not get memory usage for %s with id %s: %s',
                 host.ip_address, host.id, err)
