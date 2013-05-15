@@ -16,7 +16,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-"""DESCRIPTION""" #TODO: DESCRIPTION
 
 
 
@@ -53,7 +52,6 @@ class PollingTask(agent.PollingTask):
                         LOG.info("Polling pollster %s", pollster.name)
                         if not pollster.name in host.disabled_pollsters:
                             publisher(list(pollster.obj.get_counters(self.manager, host)))
-
                     except Exception as err:
                         LOG.warning('Continue after error from %s: %s',
                             pollster.name, err)
