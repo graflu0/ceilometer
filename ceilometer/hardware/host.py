@@ -66,7 +66,6 @@ class HardwareHost(object):
         try:
             self._name=self._get_name_from_ip(ip_address)
         except socket.herror as e:
-            print e
             self._name=""
 
         self._set_configurations(opts)
