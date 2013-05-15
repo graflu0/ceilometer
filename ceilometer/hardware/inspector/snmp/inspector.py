@@ -155,9 +155,6 @@ class SNMPInspector(hardware_inspector.Inspector):
 
                     yield (interface, stats)
 
-    def set_configuration(self, config):
-        self._config = config
-
     def _get_port(self, host):
         if host.inspector_configurations and host.inspector_configurations.get("snmp") and host.inspector_configurations.get("snmp").get("port"):
             port = host.inspector_configurations.get("snmp").get("port")

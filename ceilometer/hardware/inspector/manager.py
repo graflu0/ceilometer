@@ -50,7 +50,7 @@ class InspectorManager(object):
             global_conf = json.loads(cfg.CONF.hardware_inspector_configurations)
         else:
             #TODO: What if global_conf = None --> no hosts defined
-            global_conf = None
+            global_conf = {}
         self._inspectors = {}
         for name in list(extension_manager.ActivatedExtensionManager(
                         namespace='ceilometer.hardware.inspectors',

@@ -115,4 +115,4 @@ class Inspector(PluginBase):
         raise NotImplementedError()
         
     def set_configuration(self, config):
-        raise NotImplementedError()
+        self._config = config
